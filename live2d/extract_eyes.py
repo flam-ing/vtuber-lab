@@ -12,7 +12,7 @@ from PIL import Image
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(BASE, "..", "assets")
-PARTS = os.path.join(BASE, "parts")
+PARTS = os.path.join(BASE, "parts_v2")
 
 # eye bounding boxes in the 1024x1024 originals (x0, y0, x1, y1)
 JOBS = [
@@ -50,7 +50,10 @@ def extract(src_path, box, out_path):
     keep = cv2.GaussianBlur(keep, (5, 5), 0)
 
     crop[:, :, 3] = keep
-    Image.fromarray(crop).save(out_path)
+    # save at original coordinates on a full transparent canvas (in-place mode)
+    full = np.zeros_like(img)
+    full[y0:y1, x0:x1] = crop
+    Image.fromarray(full.astype(np.uint8)).save(out_path)
     print(f"{out_path}: box={box}, opaque px={int((keep > 128).sum())}")
 
 for src, box, out in JOBS:

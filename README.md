@@ -105,7 +105,16 @@ eye_open / eye_closed(감은눈) / hair_front / body_base / left_arm / right_arm
 눈 파츠는 AI 생성본(정면 눈, 화풍 불일치) 대신 `extract_eyes.py`가 **원본 스프라이트에서 직접 추출**:
 1_green_idle(뜬 눈)·3_green_blink(감은 눈)에서 어두운 선화+하이라이트만 마스킹, 테두리 걸린 조각 자동 제거.
 
-### 리깅 진행 순서 (Cubism Editor FREE)
+### 빠른 길: Anime2.5DRig (리깅 생략, 무료)
+
+`assemble_psd.py`가 **`flamingo_anime25d.psd`** 도 함께 생성한다 — [Anime2.5DRig](https://852wa.github.io/Anime2.5DRig/)
+(브라우저 무료 툴, 웹캠 트래킹+자동 깜빡임+마이크 입+머리 물리)의 레이어 명명 규칙에 맞춘 9레이어 병합본:
+face / eyelash(뜬 눈) / eye_close / mouth_open(합성: 아랫부리 27° 회전+입안) / mouth_close /
+front hair / topwear / left_arm / right_arm.
+사용: Chrome에서 사이트 열고 PSD 드래그 → 캠·마이크 허용 → OBS는 크롬 창 캡처(+필요시 크로마키).
+v2 파츠는 "제자리 분해" 방식(원본 좌표 보존)이라 정지 상태 합성이 원본과 일치함.
+
+### 정식 리깅 (Cubism Editor FREE) — 퀄리티 업그레이드용
 1. PSD 임포트 → 파츠 확인 → 아트메쉬 자동 생성
 2. 파라미터 매핑: `ParamMouthOpenY` = 윗부리↑/아랫부리↓ 회전(부리 뿌리에 회전 디포머), 벌리면 mouth_inside 노출
 3. `ParamEyeLOpen` = eye_open ↔ eye_closed 불투명도 전환 (1→0 사이에서 스왑)
