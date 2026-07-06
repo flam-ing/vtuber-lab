@@ -13,7 +13,7 @@ from psd_tools.api.layers import PixelLayer
 from psd_tools.constants import Compression
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-PARTS_DIR = os.path.join(BASE, "parts_v2")
+PARTS_DIR = os.path.join(BASE, "parts_v3")
 OUT_PSD = os.path.join(BASE, "flamingo_live2d.psd")
 OUT_PSD_25D = os.path.join(BASE, "flamingo_anime25d.psd")  # Anime2.5DRig naming
 OUT_PREVIEW = os.path.join(BASE, "preview.png")
@@ -29,15 +29,15 @@ CANVAS = SRC * SCALE
 # AI-infilled pixels (originally hidden) are split off and pushed behind their
 # occluders so the resting composite reproduces the original exactly.
 LAYERS = [
-    "body_fill",     # AI-filled collar/chest (was hidden behind neck & wings)
+    "body_fill",     # inpainted collar/chest (was hidden behind neck & wings)
     "head_base",
     "eye_open",
     "eye_closed",
-    "mouth_inside",  # clipped to beak silhouette (comes from the open-beak pose)
-    "lower_beak",    # AI-extended part clipped to upper beak
-    "upper_beak",
+    "body_visible",  # jersey pixels exactly as seen (collar over the neck)
+    "mouth_inside",  # synthesized cavity, clipped to beak silhouette at rest
+    "lower_beak",
+    "upper_beak",    # beak tip hangs over the chest -> beaks above the body
     "hair_front",
-    "body_visible",  # jersey pixels exactly as seen in the original
     "left_arm",
     "right_arm",
 ]
@@ -223,10 +223,10 @@ def build():
         ("face",        parts["head_base"]),
         ("eyelash",     parts["eye_open"]),
         ("eye_close",   parts["eye_closed"]),
+        ("topwear",     merge(parts["body_fill"], parts["body_visible"])),
         ("mouth_open",  mouth_open),
         ("mouth_close", merge(parts["lower_beak"], parts["upper_beak"])),
         ("front hair",  parts["hair_front"]),
-        ("topwear",     merge(parts["body_fill"], parts["body_visible"])),
         ("left_arm",    parts["left_arm"]),
         ("right_arm",   parts["right_arm"]),
     ]

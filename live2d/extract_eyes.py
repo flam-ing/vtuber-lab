@@ -12,7 +12,7 @@ from PIL import Image
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(BASE, "..", "assets")
-PARTS = os.path.join(BASE, "parts_v2")
+PARTS = os.path.join(BASE, "parts_v3")
 
 # eye bounding boxes in the 1024x1024 originals (x0, y0, x1, y1)
 JOBS = [
