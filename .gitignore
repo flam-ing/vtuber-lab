@@ -3,3 +3,4 @@ __pycache__/
 *.log
 face_landmarker.task
 .DS_Store
+*.psd

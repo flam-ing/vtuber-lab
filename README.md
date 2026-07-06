@@ -86,7 +86,32 @@ cd ~/Downloads/버튜버
 4. **디버깅 + 모션 업그레이드**: Claude Code가 흰 화면 원인(Tk 8.5) 규명 및 uv 가상환경 마이그레이션,
    연속 크로스페이드·머리 트래킹·숨쉬기 모션·EMA 스무딩 추가 (틸트는 넣었다가 제거)
 
+## Live2D 모델 (`live2d/`)
+
+0원 Live2D 루트 진행 중. AI(nano-banana)로 생성한 파츠 11장을 `live2d/parts/`에 두고,
+`assemble_psd.py`가 초록 배경 제거 → 배치(PLACEMENT 딕셔너리) → **Live2D 규격 레이어드 PSD** 생성:
+
+```bash
+./tuber-env/bin/python live2d/assemble_psd.py
+# → live2d/flamingo_live2d.psd (2048x2800, 12 layers) + preview.png
+```
+
+PSD(~280MB)는 재생성 가능하므로 git에서 제외. 위치 조정은 스크립트의 `PLACEMENT` 좌표(작업좌표 1024x1400)
+수정 후 재실행, `preview.png`로 확인.
+
+레이어 구성 (아래→위): body_fill(실루엣 메움) / head_base / mouth_inside / lower_beak / upper_beak /
+eye_white / eye_pupil / eyelid(감은눈) / hair_front / body_base / left_arm / right_arm
+
+### 리깅 진행 순서 (Cubism Editor FREE)
+1. PSD 임포트 → 파츠 확인 → 아트메쉬 자동 생성
+2. 파라미터 매핑: `ParamMouthOpenY` = 윗부리↑/아랫부리↓ 회전(부리 뿌리에 회전 디포머), 벌리면 mouth_inside 노출
+3. `ParamEyeLOpen` = eye_white+eye_pupil 축소 + eyelid 표시 전환
+4. `ParamAngleX/Y` = 머리 전체(머리 워프 디포머), `ParamEyeBallX/Y` = eye_pupil 이동
+5. hair_front에 물리(흔들림) 설정
+6. .moc3 익스포트 → VTube Studio 로드
+
 ## 다음 단계 (로드맵)
 
-- [ ] Live2D 정식 모델: 파츠 분리 PSD 제작 → Cubism Editor 리깅 → VTube Studio(iPhone ARKit 트래킹) → OBS NDI 연동
+- [x] Live2D용 파츠 분리 + 레이어드 PSD 조립 (`live2d/`)
+- [ ] Cubism Editor 리깅 → VTube Studio(맥 웹캠 트래킹, 무료) → OBS 연동
 - [ ] 크로스페이드 잔상 개선 (Live2D 전환으로 근본 해결)
