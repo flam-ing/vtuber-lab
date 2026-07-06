@@ -8,9 +8,9 @@ import os
 import numpy as np
 import cv2
 from PIL import Image
-import pytoshop
-from pytoshop.user import nested_layers
-from pytoshop import enums
+from psd_tools import PSDImage
+from psd_tools.api.layers import PixelLayer
+from psd_tools.constants import Compression
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 PARTS_DIR = os.path.join(BASE, "parts")
@@ -115,26 +115,13 @@ def build():
     Image.fromarray(preview).save(OUT_PREVIEW)
     print(f"preview -> {OUT_PREVIEW}")
 
-    psd_layers = []
-    for name, canvas in reversed(layers):  # pytoshop lists top-first
-        psd_layers.append(nested_layers.Image(
-            name=name,
-            visible=True,
-            opacity=255,
-            top=0, left=0,
-            channels={
-                0: canvas[:, :, 0],
-                1: canvas[:, :, 1],
-                2: canvas[:, :, 2],
-                -1: canvas[:, :, 3],
-            },
-        ))
-    psd = nested_layers.nested_layers_to_psd(
-        psd_layers, color_mode=enums.ColorMode.rgb,
-        size=(CANVAS_W, CANVAS_H),  # pytoshop expects (width, height)
-        compression=enums.Compression.raw)
-    with open(OUT_PSD, "wb") as f:
-        psd.write(f)
+    psd = PSDImage.new(mode="RGBA", size=(CANVAS_W, CANVAS_H))
+    for name, canvas in layers:  # append order: bottom -> top
+        ys, xs = np.where(canvas[:, :, 3] > 0)
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        tile = Image.fromarray(canvas[y0:y1, x0:x1])
+        psd.append(PixelLayer.frompil(tile, psd, name, int(y0), int(x0), Compression.RLE))
+    psd.save(OUT_PSD)
     print(f"psd -> {OUT_PSD} ({CANVAS_W}x{CANVAS_H}, {len(layers)} layers)")
 
 if __name__ == "__main__":
