@@ -1,0 +1,34 @@
+newmtl Pink
+Kd 1.0 0.41 0.70
+Ka 0.2 0.2 0.2
+illum 2
+
+newmtl Blue
+Kd 0.0 0.3 0.8
+Ka 0.2 0.2 0.2
+illum 2
+
+newmtl White
+Kd 0.95 0.95 0.95
+Ka 0.2 0.2 0.2
+illum 2
+
+newmtl Black
+Kd 0.08 0.08 0.08
+Ka 0.2 0.2 0.2
+illum 2
+
+newmtl Gray
+Kd 0.6 0.6 0.6
+Ka 0.2 0.2 0.2
+illum 2
+
+newmtl DarkGray
+Kd 0.25 0.25 0.25
+Ka 0.2 0.2 0.2
+illum 2
+
+newmtl PinkFrame
+Kd 1.0 0.08 0.58
+Ka 0.2 0.2 0.2
+illum 2
