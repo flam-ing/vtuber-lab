@@ -31,16 +31,15 @@ PLACEMENT = [
     ("mouth_inside", (405, 580, 135, False)),
     ("lower_beak",   (395, 615, 300, False)),
     ("upper_beak",   (400, 545, 270, False)),
-    ("eye_white",    (543, 470, 80, True)),
-    ("eye_pupil",    (540, 471, 78, True)),
-    ("eyelid",       (540, 471, 88, True)),
+    ("eye_open",     (540, 468, 100, False)),   # original eye lifted from 1_green_idle
+    ("eye_closed",   (540, 468, 100, False)),   # closed lash lifted from 3_green_blink
     ("hair_front",   (478, 185, 630, False)),
     ("body_base",    (610, 1080, 900, False)),
     ("left_arm",     (390, 1360, 600, False)),
     ("right_arm",    (800, 1400, 520, False)),
 ]
 
-PREVIEW_SKIP = {"eyelid"}  # closed-eye layer would cover the open eye in the flat preview
+PREVIEW_SKIP = {"eye_closed"}  # closed-eye layer would cover the open eye in the flat preview
 FILE_ALIAS = {"body_fill": "body_base"}
 
 def remove_green(arr):
@@ -49,7 +48,8 @@ def remove_green(arr):
     g = arr[:, :, 1].astype(int)
     b = arr[:, :, 2].astype(int)
     green = (g > 120) & (g > r + 25) & (g > b + 25)
-    alpha = np.where(green, 0, 255).astype(np.uint8)
+    # respect pre-existing transparency (e.g. extracted eye parts)
+    alpha = np.where(green, 0, arr[:, :, 3]).astype(np.uint8)
     # soften 1px edge to kill green fringe
     alpha = cv2.erode(alpha, np.ones((3, 3), np.uint8), iterations=1)
     alpha = cv2.GaussianBlur(alpha, (3, 3), 0)

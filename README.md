@@ -100,12 +100,15 @@ PSD(~280MB)는 재생성 가능하므로 git에서 제외. 위치 조정은 스�
 수정 후 재실행, `preview.png`로 확인.
 
 레이어 구성 (아래→위): body_fill(실루엣 메움) / head_base / mouth_inside / lower_beak / upper_beak /
-eye_white / eye_pupil / eyelid(감은눈) / hair_front / body_base / left_arm / right_arm
+eye_open / eye_closed(감은눈) / hair_front / body_base / left_arm / right_arm
+
+눈 파츠는 AI 생성본(정면 눈, 화풍 불일치) 대신 `extract_eyes.py`가 **원본 스프라이트에서 직접 추출**:
+1_green_idle(뜬 눈)·3_green_blink(감은 눈)에서 어두운 선화+하이라이트만 마스킹, 테두리 걸린 조각 자동 제거.
 
 ### 리깅 진행 순서 (Cubism Editor FREE)
 1. PSD 임포트 → 파츠 확인 → 아트메쉬 자동 생성
 2. 파라미터 매핑: `ParamMouthOpenY` = 윗부리↑/아랫부리↓ 회전(부리 뿌리에 회전 디포머), 벌리면 mouth_inside 노출
-3. `ParamEyeLOpen` = eye_white+eye_pupil 축소 + eyelid 표시 전환
+3. `ParamEyeLOpen` = eye_open ↔ eye_closed 불투명도 전환 (1→0 사이에서 스왑)
 4. `ParamAngleX/Y` = 머리 전체(머리 워프 디포머), `ParamEyeBallX/Y` = eye_pupil 이동
 5. hair_front에 물리(흔들림) 설정
 6. .moc3 익스포트 → VTube Studio 로드
