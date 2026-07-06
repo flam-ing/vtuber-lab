@@ -36,8 +36,8 @@ PLACEMENT = [
     ("eyelid",       (540, 471, 88, True)),
     ("hair_front",   (478, 185, 630, False)),
     ("body_base",    (610, 1080, 900, False)),
-    ("left_arm",     (420, 1320, 620, False)),
-    ("right_arm",    (730, 1330, 560, False)),
+    ("left_arm",     (390, 1360, 600, False)),
+    ("right_arm",    (800, 1400, 520, False)),
 ]
 
 PREVIEW_SKIP = {"eyelid"}  # closed-eye layer would cover the open eye in the flat preview
@@ -131,7 +131,7 @@ def build():
         ))
     psd = nested_layers.nested_layers_to_psd(
         psd_layers, color_mode=enums.ColorMode.rgb,
-        size=(CANVAS_H, CANVAS_W),
+        size=(CANVAS_W, CANVAS_H),  # pytoshop expects (width, height)
         compression=enums.Compression.raw)
     with open(OUT_PSD, "wb") as f:
         psd.write(f)
