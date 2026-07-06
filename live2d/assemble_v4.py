@@ -4,6 +4,7 @@
 bbox(parts_v3 알파에서 계산)에 비율 유지로 끼워 넣고, OVERRIDES로 미세조정한다.
 """
 import os
+import sys
 import numpy as np
 import cv2
 from PIL import Image
@@ -12,16 +13,18 @@ from psd_tools.api.layers import PixelLayer
 from psd_tools.constants import Compression
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-SHEET = os.path.expanduser("~/Downloads/2844d490-5e70-4182-bf69-5978037041b1.png")
+SHEET = os.path.join(BASE, "parts_sheet.png")
 V3 = os.path.join(BASE, "parts_v3")          # 목표 bbox 계산용 (픽셀은 안 씀)
 ORIGINAL = os.path.join(BASE, "..", "assets", "1_green_idle.png")
-OUT_PSD = os.path.join(BASE, "flamingo_live2d.psd")
-OUT_PSD_25D = os.path.join(BASE, "flamingo_anime25d.psd")
-OUT_PREVIEW = os.path.join(BASE, "preview.png")
-OUT_COMPARE = os.path.join(BASE, "compare.png")
 PARTS_V4 = os.path.join(BASE, "parts_v4")    # 절단 결과 확인용
 
-CANVAS = 2048
+# 캔버스 크기를 인자로 조절 가능: `assemble_v4.py 1024` -> *_1024.psd
+CANVAS = int(sys.argv[1]) if len(sys.argv) > 1 else 2048
+SUF = "" if CANVAS == 2048 else f"_{CANVAS}"
+OUT_PSD = os.path.join(BASE, f"flamingo_live2d{SUF}.psd")
+OUT_PSD_25D = os.path.join(BASE, f"flamingo_anime25d{SUF}.psd")
+OUT_PREVIEW = os.path.join(BASE, f"preview{SUF}.png")
+OUT_COMPARE = os.path.join(BASE, f"compare{SUF}.png")
 BBOX_SCALE = CANVAS / 1024  # v3 bbox(1024 공간) -> 캔버스 좌표
 
 # 시트 그리드 (1536x1024 기준, 구분선 검출값): (x0, y0, x1, y1)

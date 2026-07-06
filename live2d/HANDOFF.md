@@ -1,71 +1,79 @@
-# 인수인계: 플라밍고 Live2D 파츠 시트 → 레이어드 PSD 조립
+# 인수인계: 플라밍고 Live2D 레이어드 PSD (v5 — 제자리 절단)
 
-> 이 문서 하나만 읽으면 어떤 에이전트든 이어서 작업할 수 있게 작성됨. (2026-07-06)
+> 이 문서 하나만 읽으면 어떤 에이전트든 이어서 작업할 수 있게 작성됨. (2026-07-07)
 
-## ✅ 현재 상태 (2026-07-06 밤): 파이프라인 완성
+## ✅ 현재 상태: PSD 완성 + 실사용 검증 통과
 
-`assemble_v4.py`가 시트 절단→배경 제거→배치→PSD 2종 생성까지 전부 수행하며,
-`preview.png` 기준 조립 품질 양호. **남은 일은 실사용 테스트와 미세조정**:
+`make_psd_v5.py`가 **원본 스프라이트 제자리 절단** 방식으로 PSD 2종을 생성하며,
+검증까지 끝났다:
 
-1. `flamingo_anime25d.psd`를 https://852wa.github.io/Anime2.5DRig/ 에 드롭해 움직임 확인
-2. 어긋나는 파츠가 있으면 `assemble_v4.py`의 `OVERRIDES`(dx, dy, scale)만 수정 후 재실행
-3. 시트가 1536×1024라 파츠가 업스케일됨 — 화질이 아쉬우면 동일 구도의 고해상도
-   시트(3072×2048)를 다시 받아 `SHEET` 경로만 교체 (그리드 좌표는 비율 스케일 필요)
-4. 시트 사본은 repo에 `live2d/parts_sheet.png`로 보관됨 (Downloads가 지워져도 안전)
+- 정지 합성 vs 원본 픽셀 diff **0.35%** (전부 실루엣 가장자리 안티앨리어싱)
+- psd-tools 재오픈·레이어 오프셋·가시성 무결성 확인
+- **Anime2.5DRig 실기 테스트 통과**: 자동 리깅 성공(10파츠), 눈 깜빡임 자연스러움(사용자 확인),
+  입 벌림 정상, 시선용 eyewhite/irides 분리 인식
 
-## 목표
+## 방식 (v4에서 왜 바꿨나)
 
-AI가 그려준 **독립 파츠 시트 1장**을 잘라서, Live2D(Cubism) / Anime2.5DRig에서 쓸 수 있는
-**레이어드 PSD**로 조립한다. 파츠는 원본과 픽셀 일치하지 않아도 된다(사용자 확인됨) —
-합성했을 때 원본 캐릭터와 "충분히 닮은" 자연스러운 포즈면 성공.
+v4(AI가 그린 독립 파츠를 끼워맞춤)는 눈 얼룩·화풍 불일치·팔 각도 어긋남이 한계였다.
+v5는 **모든 보이는 픽셀이 원본 `assets/1_green_idle.png` 그대로**다:
 
-## 입력 파일
+1. 색 기반 + 폴리곤 마스크로 원본을 11파츠로 분할 (제자리, 좌표 보존)
+2. 파츠가 가리던 뒤쪽만 인페인트로 메꿈 — 두피(하드 타원), 부리 뒤 볼, 칼라 뒤 목(60px 압출), 팔 뒤 셔츠
+3. 모든 채움은 원본 실루엣 **안쪽**에만 → 정지 합성 = 원본과 픽셀 일치
+4. 눈 감음은 `3_green_blink.png`(눈 외 정합 확인됨), 입안 색은 `2_green_talk.png`에서 샘플링
 
-| 파일 | 설명 |
-|---|---|
-| `~/Downloads/2844d490-5e70-4182-bf69-5978037041b1.png` | **파츠 시트** (4×3 그리드 + 하단 범례). 셀: ①right_arm ②left_arm ③body_visible ④hair_front ⑤upper_beak ⑥lower_beak ⑦mouth_inside(벌린 입) ⑧eye_closed ⑨eye_open ⑩head_base(눈 구멍 있음) ⑪body_fill(전체 유니폼) + 원본 참고 이미지. 배경은 체커보드(진짜 알파 아님 — 제거 필요) |
-| `assets/1_green_idle.png` | 원본 스프라이트 1024×1024, 초록 배경. **배치 기준** |
-| `live2d/parts_v3/*.png` | 이전 시도(원본 크롭) 파츠. 픽셀은 안 쓰더라도 **각 파츠의 원본 내 목표 bbox를 알파에서 계산하는 용도**로 유용 |
-
-## 작업 순서
-
-1. **시트 절단**: 그리드 셀 경계(밝은 회색 구분선) 검출 → 셀별 크롭.
-2. **배경 제거**: 체커보드(저채도 밝은 회색 2색)를 셀 테두리에서 flood-fill로 제거.
-   ⚠️ 부리 흰색·유니폼 흰 줄무늬는 파츠 안에 갇혀 있으므로 edge-connected 제거만 안전.
-   라벨 칩·번호 배지는 "가장 큰 연결 성분만 유지"로 탈락시킴.
-3. **배치**: 각 파츠를 원본 스프라이트의 해당 부위 bbox(parts_v3 알파에서 계산)에
-   **비율 유지(contain) + 중앙 정렬**로 스케일·배치. 미세조정은 파츠별 offset/scale 오버라이드.
-4. **PSD 저장**: psd-tools의 `PixelLayer.frompil(...)` + RLE. **pytoshop은 깨진 파일을 만드니 금지.**
-   캔버스 2048×2048. 레이어 순서(아래→위):
-   `body_fill, head_base, eye_open, eye_closed, body_visible, mouth_inside, lower_beak, upper_beak, hair_front, left_arm, right_arm`
-   (부리 끝이 가슴 위에 뜨는 포즈라 부리 > body_visible)
-5. **Anime2.5DRig 변형 PSD**도 함께: 레이어명 `face / eyelash(뜬 눈) / eye_close / topwear(body 병합) / mouth_open / mouth_close(부리 병합) / front hair / left_arm / right_arm`.
-   `mouth_open` = mouth_inside + 아랫부리를 뿌리 피벗 기준 ~27° 아래로 회전 + 윗부리 합성.
-6. **검증**: 전체 합성 preview.png를 원본과 나란히 놓고 눈으로 확인. 눈/부리/머리 위치가
-   원본과 크게 어긋나면 offset 조정 후 재실행.
-
-## 환경 / 실행
+## 실행
 
 ```bash
 cd ~/Documents/GitHub/vtuber-lab
-./tuber-env/bin/python live2d/assemble_v4.py   # 이 스크립트가 위 전 과정 수행
+./tuber-env/bin/python live2d/make_psd_v5.py
 ```
 
-- Python은 반드시 `./tuber-env/bin/python` (uv venv, numpy/cv2/PIL/psd-tools 설치됨).
-- 기존 스크립트: `assemble_psd.py`(v3용, 참고만), `make_parts_v3.py`, `extract_eyes.py`.
-- 산출물: `live2d/flamingo_live2d.psd`, `live2d/flamingo_anime25d.psd`, `live2d/preview.png`.
+산출물 (git 제외, 재생성 가능):
+- `flamingo_live2d.psd` — Cubism용 13레이어 2048², 상태 레이어(eye_closed/mouth_inside)는 기본 숨김
+- `flamingo_anime25d.psd` — Anime2.5DRig용 9레이어 (명명 규약 준수)
+- `preview.png`, `compare.png`(원본|정지|눈감음|입벌림), `masks_debug.png`(마스크 색코딩), `parts_v5/*.png`
 
-## 이후 로드맵 (PSD 완성 다음)
+## 조정 포인트 (전부 스크립트 상단 상수)
 
-1. **빠른 데뷔**: Chrome에서 https://852wa.github.io/Anime2.5DRig/ 열고 `flamingo_anime25d.psd`
-   드래그 → 캠·마이크 허용 → OBS 크롬 창 캡처.
-2. **정식 리깅**: Cubism Editor FREE에 `flamingo_live2d.psd` 임포트 → ParamMouthOpenY(부리 회전),
-   ParamEyeLOpen(eye_open↔eye_closed 스왑), 머리 워프 디포머, hair_front 물리 → .moc3 →
-   VTube Studio(맥, iPhone 트래킹 권장).
+| 상수 | 용도 |
+|---|---|
+| `BEAK_CLIP` | 부리 탐색 한계 폴리곤 (칼라·턱선이 섞이면 여기 조정) |
+| `BEAK_SEAM` | 입 이음선 (아래=아랫부리). 아랫부리는 5px 위로 겹쳐 틈 방지 |
+| `HAIR_CUT` | 머리카락/얼굴 컷라인 (눈 y≥305, 부리 윗선 y≈350 피할 것) |
+| `GAPE`, `MOUTH_ANGLE` | 입꼬리 피벗, 벌림 각(+24° = 화면상 아래) |
+| `EYE_OPEN_BOX` / `EYE_CLOSED_BOX` | 눈 추출 탐색 범위 |
+| `SKULL` | 머리카락 뒤 두피 타원 |
 
-## 실패 이력 (반복 금지)
+## 축적된 함정 (반복 금지)
 
-- AI에게 파츠를 "제자리 분해"로 시켰으나 조립 품질 불만족 → **독립 파츠 + 수동 배치**로 전환(현재).
-- pytoshop → 깨진 PSD. psd-tools 사용.
-- `2_green_talk.png`는 idle과 포즈 불일치 — 벌린 입 소스로 쓰지 말 것.
-- 시스템 python3(Tk 8.5)로 GUI 실행 금지 — 흰 화면.
+- **int16으로 알파 연산 금지** — `(60-greenness)*255`가 오버플로우해 알파가 뒤집힌다 (int32 사용 중)
+- **cv2.inpaint에 "차단" 픽셀을 검정으로 칠해 넘기지 말 것** — 검정이 새어들어 어두운 링 생김.
+  차단 픽셀은 인페인트 마스크(미지 영역)에 포함시켜라 (`inpaint_into` 참고)
+- **내부 경계 페더링 금지** — 인접 파츠 사이 반투명 실선 틈이 생긴다. 하드 엣지 + 겹침이 정답
+- **디스필은 언믹스 방식** — `G=min(G,max(R,B))` 클램프는 올리브빛 테두리를 남긴다
+  (다크 배경 송출에서 티 남). `art=(obs-bg·(1-α))/α`로 복원
+- **입안은 스윕(sweep) 영역** — 아랫부리 발자국 전체를 채우면 슬라브처럼 보인다.
+  아랫부리 마스크를 0→24°로 회전시킨 합집합에서 최종 턱(+3px)을 뺀 것이 "벌어진 틈"
+- pytoshop은 깨진 PSD 생성 — psd-tools `PixelLayer.frompil` 사용
+- `2_green_talk.png`는 idle과 포즈 불일치 — 색 샘플링에만 사용
+- 시스템 python3(Tk 8.5) GUI 금지 — 흰 화면
+
+## Anime2.5DRig 명명 규약 요점 (https://852wa.github.io/Anime2.5DRig/ README)
+
+- `face`(필수) / `eyewhite` / `irides` / `eyelash` / `eye_close` / `mouth_open` / `mouth_close` /
+  `topwear` / `handwear`(팔·손) / `front hair` / `back hair`
+- **미지의 레이어명은 위치로 head/몸에 붙어버린다** (left_arm/right_arm → head 취급됐었음. handwear로 병합)
+- 목은 face에 통합(一体型)이 안정적. 레이어 그룹(폴더) 미지원 — 플랫 구성만
+- **사용자 피드백 반영: 앞머리는 face에 병합** (房 물리가 과했음). Cubism PSD에는 hair_front
+  분리 유지 — 리깅에서 물리를 원하는 만큼만 주면 됨
+
+## 사용법
+
+1. **빠른 데뷔**: Chrome에서 https://852wa.github.io/Anime2.5DRig/ → `flamingo_anime25d.psd`
+   업로드 → 캠·마이크 허용 → OBS 크롬 창 캡처. (검증 완료 상태)
+2. **정식 리깅**: Cubism Editor FREE에 `flamingo_live2d.psd` 임포트 →
+   `ParamMouthOpenY` = 아랫부리 회전(피벗 GAPE≈(588,414)·mouth_inside 노출),
+   `ParamEyeLOpen` = eye_white+eye_iris+eye_lash ↔ eye_closed 전환,
+   `ParamEyeBallX/Y` = eye_iris 이동(eye_white 클리핑), 머리 워프 디포머,
+   hair_front 물리 → .moc3 → VTube Studio(맥, iPhone 트래킹 권장).
