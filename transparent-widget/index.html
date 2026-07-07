@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transparent PNGTuber Widget</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="character-container">
+        <!-- The sprites are preloaded as hidden, only the active one is visible -->
+        <img id="state-idle" src="assets/1_closed_eyes_open.png" class="sprite active" alt="idle">
+        <img id="state-talk" src="assets/2_open_eyes_open.png" class="sprite" alt="talk">
+        <img id="state-blink" src="assets/3_closed_eyes_closed.png" class="sprite" alt="blink">
+        <img id="state-talk_blink" src="assets/4_open_eyes_closed.png" class="sprite" alt="talk_blink">
+    </div>
+    
+    <!-- Controls (initially hidden, shows up if mic permission needs to be triggered) -->
+    <div id="mic-status">마이크 연동 활성화: 캐릭터를 더블 클릭하세요</div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
