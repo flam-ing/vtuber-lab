@@ -71,26 +71,45 @@ def build():
     for e in eyes:
         eye_mask |= e
 
-    # --- 부리(mouth_close): 검은 끝 + 위의 연분홍 몸통 + 테두리 ---
-    tipzone = dark & ~eye_mask
-    tipzone[:int(H * 0.5), :] = False
-    tipzone[int(H * 0.75):, :] = False
-    tipzone[:, :int(W * 0.38)] = False
-    tipzone[:, int(W * 0.62):] = False
-    n, lab, stats, cent = comp_masks(tipzone)
-    i = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
-    tip = lab == i
+    # --- 부리(mouth_close): 연분홍 몸통 먼저 -> 바로 아래 "두꺼운" 검정만 끝으로 ---
     n, lab, stats, cent = comp_masks(beak_pale)
-    tys, txs = np.where(tip)
-    seed = (int(txs.mean()), int(tys.min()) - 25)
-    bid = lab[seed[1], seed[0]]
-    if bid == 0:  # 시드가 외곽선에 걸리면 주변 최대 성분
-        near = lab[max(0, seed[1] - 40):seed[1] + 40, max(0, seed[0] - 40):seed[0] + 40]
-        vals, cnts = np.unique(near[near > 0], return_counts=True)
-        bid = vals[np.argmax(cnts)]
-    body = lab == bid
+    body = None
+    for i in np.argsort(stats[1:, cv2.CC_STAT_AREA])[::-1] + 1:
+        if stats[i, cv2.CC_STAT_AREA] < 3000:
+            break
+        cx_, cy_ = cent[i]
+        if W * 0.40 < cx_ < W * 0.60 and H * 0.40 < cy_ < H * 0.64:
+            body = lab == i
+            break
+    if body is None:
+        raise RuntimeError("beak body not found")
+    pys, pxs = np.where(body)
+    pb_x0, pb_x1, pb_y1 = pxs.min(), pxs.max(), pys.max()
+
+    dark_bk = dark & (b < 60)   # 진짜 검정만 (네이비 유니폼 제외)
+
+    # 부리 영역 한계 박스 (칼라로 새지 않게)
+    limit = np.zeros((H, W), bool)
+    limit[max(0, pys.min() - 30):min(H, pb_y1 + 190),
+          max(0, pb_x0 - 35):min(W, pb_x1 + 35)] = True
+
+    # 두꺼운 검정 코어(얇은 칼라 외곽선은 침식으로 소멸)
+    dark_core = cv2.erode(dark_bk.astype(np.uint8),
+                          cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))) > 0
+    strip = np.zeros((H, W), bool)
+    strip[pb_y1 - 15:min(H, pb_y1 + 150), max(0, pb_x0 - 15):min(W, pb_x1 + 15)] = True
+    n2, lab2, st2, _ = comp_masks(dark_core & strip & ~eye_mask)
+    tip_core = np.zeros((H, W), bool)
+    for i in range(1, n2):
+        if st2[i, cv2.CC_STAT_AREA] > 300:
+            tip_core |= lab2 == i
+    tip = (cv2.dilate(tip_core.astype(np.uint8),
+                      cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (19, 19))) > 0) \
+        & dark_bk & limit & ~eye_mask
+
     core = body | tip
-    ring = (cv2.dilate(core.astype(np.uint8), np.ones((25, 25), np.uint8)) > 0) & dark & ~eye_mask
+    ring = (cv2.dilate(core.astype(np.uint8), np.ones((21, 21), np.uint8)) > 0) \
+        & dark_bk & limit & ~eye_mask
     beak = fill_holes(cv2.morphologyEx((core | ring).astype(np.uint8), cv2.MORPH_CLOSE,
                                        np.ones((9, 9), np.uint8)) > 0)
 
@@ -134,40 +153,42 @@ def build():
     covered = cv2.dilate((eye_mask | beak).astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
     face_rgb = np.where((covered | fill_zone)[:, :, None], FACE_PINK, face_rgb)
 
-    # --- mouth_open 합성 (아트 팔레트로) ---
+    # --- mouth_open 합성: 같은 부리가 "살짝 벌어진" 모양 ---
+    # 윗부리(연분홍 몸통)는 위로, 아랫부리(검은 끝)는 아래로, 사이에 작은 틈만.
     bys, bxs = np.where(beak)
     bx0, bx1, by0, by1 = bxs.min(), bxs.max(), bys.min(), bys.max()
     bw_, bh_ = bx1 - bx0, by1 - by0
     cx = (bx0 + bx1) / 2
-    mo = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(mo)
-    upper_cut = by0 + int(bh_ * 0.52)
-    cav_y0 = upper_cut - 30
-    cav_y1 = by1 + int(bh_ * 0.15)
-    exp = int(bw_ * 0.125)
-    d.ellipse([bx0 - exp, cav_y0, bx1 + exp, cav_y1], fill=MOUTH, outline=INK, width=11)
-    d.ellipse([bx0 - exp + 12, cav_y0 + 10, bx1 + exp - 12, cav_y0 + int((cav_y1 - cav_y0) * 0.45)],
-              fill=MOUTH_DK)
-    tw = int(bw_ * 0.58)
-    d.ellipse([cx - tw / 2, cav_y1 - int((cav_y1 - cav_y0) * 0.46), cx + tw / 2, cav_y1 - 12],
-              fill=TONGUE, outline=(150, 50, 70), width=7)
-    # 아래 검은 턱 (초승달)
-    jaw = Image.new("L", (W, H), 0)
-    dj = ImageDraw.Draw(jaw)
-    dj.ellipse([bx0 - exp, cav_y0, bx1 + exp, cav_y1], fill=255)
-    dj.ellipse([bx0 - exp + 8, cav_y0 - 22, bx1 + exp - 8, cav_y1 - 24], fill=0)
-    jaw_np = (np.array(jaw) > 0)
-    jaw_np[:cav_y0 + int((cav_y1 - cav_y0) * 0.78), :] = False
-    mo_np = np.array(mo)
-    mo_np[jaw_np] = (*INK, 255)
-    # 윗부리 조각: 원본 부리 픽셀의 위쪽 52%
-    up_mask = beak.copy()
-    up_mask[upper_cut:, :] = False
-    up = np.zeros((H, W, 4), np.uint8)
-    up[:, :, :3] = img
-    up[:, :, 3] = np.where(up_mask, 255, 0)
-    mo_final = Image.fromarray(mo_np)
-    mo_final.alpha_composite(Image.fromarray(up))
+
+    tip_full = tip | ((cv2.dilate(tip.astype(np.uint8), np.ones((13, 13), np.uint8)) > 0)
+                      & dark_bk & beak)
+    upper_full = beak & ~tip_full
+    ty0 = np.where(tip_full)[0].min()
+    UP_SHIFT, DOWN_SHIFT = 14, int(bh_ * 0.24)
+
+    def shifted(mask, dy):
+        out = np.zeros((H, W, 4), np.uint8)
+        out[:, :, :3] = img
+        out[:, :, 3] = np.where(mask, 255, 0)
+        M = np.float32([[1, 0, 0], [0, 1, dy]])
+        return cv2.warpAffine(out, M, (W, H), flags=cv2.INTER_LINEAR,
+                              borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
+
+    upper_img = shifted(upper_full, -UP_SHIFT)
+    lower_img = shifted(tip_full, DOWN_SHIFT)
+
+    # 틈: 부리 폭보다 좁은 작은 둥근 렌즈 (부리 실루엣에서 크게 안 벗어남)
+    mo_final = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(mo_final)
+    gw = bw_ * 0.44
+    gy0, gy1 = ty0 - UP_SHIFT - 6, ty0 + DOWN_SHIFT + 26
+    d.ellipse([cx - gw, gy0, cx + gw, gy1], fill=MOUTH, outline=INK, width=10)
+    d.ellipse([cx - gw + 10, gy0 + 8, cx + gw - 10, gy0 + (gy1 - gy0) * 0.42], fill=MOUTH_DK)
+    tw = gw * 0.9
+    d.ellipse([cx - tw / 2, gy1 - (gy1 - gy0) * 0.42, cx + tw / 2, gy1 - 8],
+              fill=TONGUE, outline=(150, 50, 70), width=6)
+    mo_final.alpha_composite(Image.fromarray(lower_img))
+    mo_final.alpha_composite(Image.fromarray(upper_img))
 
     # --- 레이어 구성 ---
     def to_rgba(mask, src=img):
