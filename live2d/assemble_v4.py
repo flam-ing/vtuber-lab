@@ -282,14 +282,17 @@ def build():
     Image.fromarray(np.concatenate([orig[:, :, :3], preview[:, :, :3]], axis=1)).save(OUT_COMPARE)
     print(f"preview/compare -> {OUT_PREVIEW}")
 
-    # Anime2.5DRig 변형: mouth_open = 입안 + 아랫부리 27도 회전 + 윗부리
-    lb = placed["lower_beak"]
-    ys, xs = np.where(lb[:, :, 3] > 40)
-    pivot = (float(xs.max()), float(ys.min()))  # 부리 뿌리(오른쪽 위)
-    M = cv2.getRotationMatrix2D(pivot, -27, 1.0)
-    lb_open = cv2.warpAffine(lb, M, (CANVAS, CANVAS), flags=cv2.INTER_LINEAR,
-                             borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
-    mouth_open = merge(placed["mouth_inside"], lb_open, placed["upper_beak"])
+    # Anime2.5DRig 변형: 부리 상/하 분리 불필요 — 두 상태를 통짜로 교차한다.
+    # mouth_close = 원본에서 크롭한 닫힌 부리 통짜(v3, 진짜 원본 픽셀)
+    # mouth_open  = 시트의 벌린 입 아트를 부리 자리에 배치
+    v3u = np.array(Image.open(os.path.join(V3, "upper_beak.png")).convert("RGBA"))
+    v3l = np.array(Image.open(os.path.join(V3, "lower_beak.png")).convert("RGBA"))
+    beak_closed = cv2.resize(merge(v3l, v3u), (CANVAS, CANVAS),
+                             interpolation=cv2.INTER_CUBIC)
+    ys, xs = np.where(beak_closed[:, :, 3] > 40)
+    bcx, bcy = (xs.min() + xs.max()) / 2, (ys.min() + ys.max()) / 2
+    bw, bh = xs.max() - xs.min(), ys.max() - ys.min()
+    mouth_open = place_at(cuts["mouth_inside"], bcx, bcy, bw * 1.1, bh * 1.1)
 
     write_psd(OUT_PSD_25D, [
         ("face", placed["head_base"]),
@@ -297,7 +300,7 @@ def build():
         ("eye_close", placed["eye_closed"]),
         ("topwear", merge(placed["body_fill"], placed["body_visible"])),
         ("mouth_open", mouth_open),
-        ("mouth_close", merge(placed["lower_beak"], placed["upper_beak"])),
+        ("mouth_close", beak_closed),
         ("front hair", placed["hair_front"]),
         ("left_arm", placed["left_arm"]),
         ("right_arm", placed["right_arm"]),
