@@ -1,6 +1,16 @@
+# local env
 tuber-env/
 __pycache__/
+*.pyc
+.Python
+
+# runtime / models (downloaded or generated)
 *.log
 face_landmarker.task
-.DS_Store
 *.psd
+
+# OS / editor
+.DS_Store
+.av-shots/
+.idea/
+.vscode/
