@@ -1,12 +1,27 @@
-# local env
+# Python
 tuber-env/
 __pycache__/
 *.pyc
 .Python
 
-# runtime / models (downloaded or generated)
+# Node (04 Electron app)
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+release/
+**/release/
+*.dmg
+
+# runtime logs / junk
 *.log
-face_landmarker.task
+main-*.js
+shots/
+
+# 01 4cut — downloaded at runtime
+01-mingo-4cut/face_landmarker.task
+
+# PSD (large / regenerable from scripts)
 *.psd
 
 # OS / editor
