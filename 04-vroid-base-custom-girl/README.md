@@ -42,9 +42,14 @@ npm run dev
 ## 빌드 (DMG)
 
 ```bash
-npm run dist
-# → release/…-arm64.dmg (gitignore)
+# 권장: dmgbuild 이슈 우회 (hdiutil)
+npm run dist:dmg
+# → release/MingoMate-0.2.0-arm64.dmg
+# → release/vroid-base-custom-girl-0.2.0-arm64.dmg  (동일 내용, 슬롯4 이름)
 ```
+
+`npm run dist` (electron-builder dmg)는 이 Mac에서 hdiutil attach 실패가 날 수 있음.  
+`release/` 는 gitignore — 로컬 배포용으로 보관.
 
 ## 원본
 

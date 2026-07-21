@@ -12,7 +12,8 @@
     "start": "npm run build && electron .",
     "shot": "node scripts/screenshot.mjs",
     "dist": "npm run build && electron-builder --mac dmg",
-    "dist:dir": "npm run build && electron-builder --mac dir"
+    "dist:dir": "npm run build && electron-builder --mac dir",
+    "dist:dmg": "bash scripts/pack-dmg.sh"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.35",
