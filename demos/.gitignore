@@ -1,0 +1,12 @@
+# keep: *.gif showcase, *-preview.jpg, demo_*.py, black_backdrop.py, record_clean.sh, .gitignore
+clean/
+*.mp4
+*.log
+*.pid
+*_pal.png
+_pal*.png
+pal*.png
+to_gif.sh
+demo_04_clean_motion.patch.md
+_perm_test.mp4
+.DS_Store
