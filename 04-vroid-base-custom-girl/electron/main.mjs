@@ -17,22 +17,28 @@ let cursorTimer = null
 
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay()
-  // 화면 안에 완전히 들어오도록 배치
-  const x = Math.min(
+  const demo = process.env.MINGO_DEMO_MOTION === '1'
+  // 화면 안에 완전히 들어오도록 배치 (demo: fixed crop-friendly coords)
+  let x = Math.min(
     workArea.x + workArea.width - WIN_W - 24,
     workArea.x + workArea.width - WIN_W,
   )
-  const y = Math.min(
+  let y = Math.min(
     workArea.y + workArea.height - WIN_H - 8,
     workArea.y + Math.max(0, workArea.height - WIN_H),
   )
+  if (demo) {
+    x = workArea.x + 200
+    y = workArea.y + 80
+  }
 
   win = new BrowserWindow({
     width: WIN_W,
     height: WIN_H,
     x: Math.max(workArea.x, x),
     y: Math.max(workArea.y, y),
-    transparent: true,
+    transparent: !demo, // solid black chrome-free panel for clean recordings
+    backgroundColor: demo ? '#0a0a0c' : '#00000000',
     frame: false,
     type: 'panel', // NSPanel: 풀스크린 앱 위에도 뜸 (electron#36364 회피)
     hasShadow: false,
@@ -55,9 +61,10 @@ function createWindow() {
   win.setIgnoreMouseEvents(false)
 
   const devServer = process.env.VITE_DEV_SERVER
+  const demoQs = process.env.MINGO_DEMO_MOTION === '1' ? '?demoMotion=1' : ''
   if (devServer) {
     // concurrently가 electron을 vite보다 먼저 띄울 수 있음 → 실패 시 재시도
-    const url = `${devServer}/index.html`
+    const url = `${devServer}/index.html${demoQs}`
     let attempts = 0
     const maxAttempts = 60
     const loadDev = () => {

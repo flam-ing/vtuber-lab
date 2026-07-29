@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { createMingo } from './model/index'
 import { createTracker } from './tracking/index'
 import { createAliveness } from './aliveness/index'
-import { neutralFrame, type CursorInfo } from './contract'
+import { neutralArm, neutralBody, neutralFrame, type CursorInfo, type RigFrame } from './contract'
 import { drawTrackingOverlay } from './tracking/overlay'
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement
@@ -12,6 +12,9 @@ const overlay = document.getElementById('track-overlay') as HTMLCanvasElement | 
 const overlayCtx = overlay?.getContext('2d') ?? null
 const hud = document.getElementById('track-hud') as HTMLDivElement | null
 const panelBadge = document.getElementById('track-panel-badge')
+
+/** Clean demo mode: no camera UI, scripted motion (for face-free screen recordings) */
+const demoMotion = new URLSearchParams(location.search).get('demoMotion') === '1'
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -33,8 +36,8 @@ scene.add(mingo.root)
 
 /** 아바타 줌 (1 = 기본, 클수록 멀리 = 더 작게) */
 let avatarZoom = 1.0
-let showTrackPanel = true
-let showTrackHud = true
+let showTrackPanel = !demoMotion
+let showTrackHud = !demoMotion
 
 /**
  * 전신 프레이밍 — PR 원본 그대로.
@@ -50,9 +53,10 @@ function frameCamera() {
   renderer.setScissorTest(false)
 
   const bodyH = Math.max(0.5, mingo.height || 1.5)
-  const lookY = bodyH * 0.52
-  // 1.25 = 전신 + 머리/발 여백 (원본 1.06은 창이 좁으면 타이트)
-  const fitH = bodyH * 1.25 * Math.max(0.85, avatarZoom)
+  // demoMotion: bust-up *camera framing* for showcase GIFs only (model still full-body)
+  const lookY = demoMotion ? bodyH * 0.78 : bodyH * 0.52
+  // 1.25 = 전신 + 머리/발 여백 / demo shot: head–chest only
+  const fitH = (demoMotion ? bodyH * 0.55 : bodyH * 1.25) * Math.max(0.85, avatarZoom)
   const dist = fitH / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
 
   camera.position.set(0, lookY, dist)
@@ -156,7 +160,15 @@ function stopCam() {
   video.srcObject = null
   overlayCtx?.clearRect(0, 0, overlay?.width ?? 0, overlay?.height ?? 0)
 }
-startCam()
+if (!demoMotion) {
+  startCam()
+} else {
+  // Clean recording: no webcam pixels / panel on screen
+  if (trackPanel) trackPanel.style.display = 'none'
+  if (hud) hud.style.display = 'none'
+  showTrackPanel = false
+  showTrackHud = false
+}
 
 // ---------- 트래킹 패널 드래그 (윈도우 안 배치, 잘림 방지 클램프) ----------
 let panelDragging = false
@@ -405,9 +417,71 @@ function loop() {
   const dt = Math.min(clock.getDelta(), 0.1)
   const t = clock.elapsedTime
 
-  const raw = trackingUp ? tracker.latest() : neutralFrame()
-  const frame = aliveness.compose(raw, dt, t, cursor)
-  lastTracked = frame.tracked
+  let frame
+  if (demoMotion) {
+    // Face-free upper-body demo: gentle head + soft arm sway (no wild IK)
+    const mouth = 0.25 + 0.35 * Math.max(0, Math.sin(t * 7.5))
+    const blink = (t % 2.8) < 0.11 ? 1 : 0
+    const yaw = 0.22 * Math.sin(t * 0.7)
+    const pitch = 0.08 * Math.sin(t * 0.95)
+    const roll = 0.05 * Math.sin(t * 1.15)
+    const sway = 0.12 * Math.sin(t * 1.4)
+    const lift = 0.08 * Math.sin(t * 1.1)
+    const L = neutralArm(1)
+    const R = neutralArm(-1)
+    L.present = 0.85
+    R.present = 0.85
+    L.upperDir = { x: 0.22 + sway, y: -0.92 + lift, z: 0.28 }
+    L.lowerDir = { x: 0.16 + sway * 0.5, y: -0.88, z: 0.42 }
+    L.palmNormal = { x: -0.2, y: 0.1, z: 0.97 }
+    L.handDir = { x: 0.12, y: -0.2, z: 0.97 }
+    L.fingers = [0.25, 0.2, 0.22, 0.24, 0.28]
+    L.spread = 0.2
+    L.wave = 0
+    R.upperDir = { x: -0.22 - sway, y: -0.92 + lift * 0.8, z: 0.28 }
+    R.lowerDir = { x: -0.16 - sway * 0.5, y: -0.88, z: 0.42 }
+    R.palmNormal = { x: 0.2, y: 0.1, z: 0.97 }
+    R.handDir = { x: -0.12, y: -0.2, z: 0.97 }
+    R.fingers = [0.25, 0.2, 0.22, 0.24, 0.28]
+    R.spread = 0.2
+    R.wave = 0
+    const n3 = (v: { x: number; y: number; z: number }) => {
+      const l = Math.hypot(v.x, v.y, v.z) || 1
+      return { x: v.x / l, y: v.y / l, z: v.z / l }
+    }
+    L.upperDir = n3(L.upperDir); L.lowerDir = n3(L.lowerDir)
+    R.upperDir = n3(R.upperDir); R.lowerDir = n3(R.lowerDir)
+    L.palmNormal = n3(L.palmNormal); L.handDir = n3(L.handDir)
+    R.palmNormal = n3(R.palmNormal); R.handDir = n3(R.handDir)
+    const demo: RigFrame = {
+      tracked: 1,
+      head: { pitch, yaw, roll },
+      gaze: { x: 0.28 * Math.sin(t * 0.65), y: 0.1 * Math.sin(t * 0.85) },
+      blinkL: blink,
+      blinkR: blink,
+      browL: 0.08 * Math.sin(t * 0.45),
+      browR: 0.08 * Math.sin(t * 0.45),
+      mouthOpen: mouth,
+      mouthSmile: 0.28 + 0.12 * Math.sin(t * 0.55),
+      armL: L,
+      armR: R,
+      body: {
+        ...neutralBody(),
+        present: 0.5,
+        lean: { x: 0.03 * Math.sin(t * 0.75), z: 0.02 * Math.sin(t * 0.9) },
+        twist: 0.05 * Math.sin(t * 0.5),
+        legsPresent: 0,
+      },
+      fx: { heart: false, happy: mouth > 0.55, sweat: false, anger: false },
+      breath: (Math.sin(t * 1.5) + 1) * 0.5,
+    }
+    frame = demo
+    lastTracked = 1
+  } else {
+    const raw = trackingUp ? tracker.latest() : neutralFrame()
+    frame = aliveness.compose(raw, dt, t, cursor)
+    lastTracked = frame.tracked
+  }
   mingo.apply(frame, dt, t)
 
   // ---- 카메라 + 노드/엣지 디버그 패널 ----
@@ -593,7 +667,7 @@ function setPipelineVisible(visible: boolean) {
   } else {
     pipelinePaused = false
     camWanted = true
-    startCam()
+    if (!demoMotion) startCam()
     clock.getDelta() // 숨김 기간 델타 플러시 (복귀 프레임 점프 방지)
     cancelAnimationFrame(rafId) // 중복 루프 방지
     loop()
