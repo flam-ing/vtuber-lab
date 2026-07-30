@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>MingoMate</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+    canvas#stage { display: block; width: 100vw; height: 100vh; }
+
+    /* MediaPipe 입력용 — 화면 밖 */
+    video#cam {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: 640px;
+      height: 480px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /*
+     * 인식 디버그 패널 — 드래그 가능, 작은 오버레이.
+     * 아바타 전신 프레이밍은 main.ts frameCamera (FOV 17)가 담당.
+     */
+    #track-panel {
+      position: fixed;
+      left: 180px;
+      bottom: 8px;
+      right: auto;
+      width: 220px;
+      height: 165px;
+      opacity: 0.92;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+      z-index: 40;
+      background: #0b0d14;
+      pointer-events: auto;
+      cursor: grab;
+      user-select: none;
+      -webkit-app-region: no-drag;
+    }
+    #track-panel.dragging { cursor: grabbing; }
+    #track-panel .titlebar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 22px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      font: 10px/1 ui-monospace, Menlo, monospace;
+      color: rgba(255,255,255,0.85);
+      background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.15));
+      pointer-events: auto;
+    }
+    #track-panel canvas#track-overlay {
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* 스펙 로그 — 발 밑 독, 카메라 패널 왼쪽 (가로 나란히) */
+    #track-hud {
+      position: fixed;
+      left: 10px;
+      bottom: 10px;
+      right: auto;
+      top: auto;
+      z-index: 41;
+      min-width: 160px;
+      max-width: 190px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(10, 12, 20, 0.82);
+      color: #f4f7ff;
+      font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre;
+      pointer-events: none;
+      border: 1px solid rgba(255,255,255,0.25);
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <video id="cam" playsinline muted autoplay></video>
+  <div id="track-panel" aria-label="Camera tracking preview">
+    <div class="titlebar">
+      <span>tracking · drag me</span>
+      <span id="track-panel-badge">…</span>
+    </div>
+    <canvas id="track-overlay" width="720" height="540"></canvas>
+  </div>
+  <div id="track-hud">camera…</div>
+  <canvas id="stage"></canvas>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

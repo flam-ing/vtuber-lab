@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>03 candidates (no mingo-vtuber chibi)</title>
+<style>
+  html, body { margin:0; height:100%; background:#0b0c10; color:#e8ecf4; font:14px/1.4 system-ui,sans-serif; }
+  h1 { margin:0; padding:12px 16px; font-size:16px; font-weight:700; border-bottom:1px solid #222; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; height:calc(100% - 48px); gap:1px; background:#222; }
+  .panel { position:relative; background:#111; min-height:0; }
+  .panel canvas, .panel img.view { width:100%; height:100%; display:block; object-fit:contain; background:#0a0a0c; }
+  .label {
+    position:absolute; left:10px; top:10px; z-index:2;
+    padding:6px 10px; border-radius:8px; background:rgba(0,0,0,.65);
+    border:1px solid rgba(255,255,255,.12); font-size:12px; font-weight:600;
+    pointer-events:none; max-width:90%;
+  }
+  .sub { opacity:.7; font-weight:500; display:block; margin-top:2px; font-size:11px; }
+  .err { color:#ff8a9a; }
+</style>
+</head>
+<body>
+<h1>vtuber-lab 슬롯 03–05 + 참고 · 드래그 회전 / 스크롤 줌</h1>
+<div class="grid">
+  <div class="panel" id="p1"><div class="label">참고 · Live2D 미리보기<span class="sub">archive/live2d (슬롯 밖 보관)</span></div></div>
+  <div class="panel" id="p2"><div class="label">04 · Meshy 3D FBX<span class="sub">04-meshy-flamingo-fbx/models</span></div></div>
+  <div class="panel" id="p3"><div class="label">03 · flamingo_3d.obj<span class="sub">03-flamingo-3d-obj/models</span></div></div>
+  <div class="panel" id="p4"><div class="label">05 · flamingo_motion.vrm<span class="sub">05-mingo-vtuber2-vrm · mingo-vtuber2</span></div></div>
+</div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.4.2/lib/three-vrm.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+function fit(object, camera, controls, offset = 1.35) {
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const max = Math.max(size.x, size.y, size.z) || 1;
+  object.position.sub(center);
+  camera.position.set(max * 0.9, max * 0.55, max * offset);
+  camera.near = max / 200;
+  camera.far = max * 50;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.update();
+}
+
+function makeViewer(panel, opts = {}) {
+  const w = () => panel.clientWidth || 400;
+  const h = () => panel.clientHeight || 300;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.setSize(w(), h());
+  renderer.setClearColor(0x0a0a0c, 1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  panel.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, w() / h(), 0.01, 1000);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.1));
+  const key = new THREE.DirectionalLight(0xffffff, 1.2);
+  key.position.set(2, 4, 3);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0x88aaff, 0.35);
+  fill.position.set(-2, 1, -1);
+  scene.add(fill);
+
+  const onResize = () => {
+    camera.aspect = w() / h();
+    camera.updateProjectionMatrix();
+    renderer.setSize(w(), h());
+  };
+  window.addEventListener('resize', onResize);
+
+  let root = null;
+  const tick = () => {
+    requestAnimationFrame(tick);
+    if (opts.autoRotate && root) root.rotation.y += 0.006;
+    controls.update();
+    renderer.render(scene, camera);
+  };
+  tick();
+
+  return {
+    scene, camera, controls, renderer,
+    setObject(obj) {
+      if (root) scene.remove(root);
+      root = obj;
+      scene.add(obj);
+      fit(obj, camera, controls, opts.fit || 1.4);
+    },
+    setError(msg) {
+      const el = document.createElement('div');
+      el.className = 'label err';
+      el.style.top = '48px';
+      el.textContent = msg;
+      panel.appendChild(el);
+    }
+  };
+}
+
+// A — Live2D still
+{
+  const p = document.getElementById('p1');
+  const img = document.createElement('img');
+  img.className = 'view';
+  img.src = './models/live2d_preview.png';
+  img.alt = 'Live2D flamingo';
+  p.appendChild(img);
+}
+
+// Serve repo root: python3 -m http.server 8799  (from vtuber-lab/)
+// Viewer page: http://127.0.0.1:8799/demos/view3d/
+const ROOT = '../..';
+const MESHY_FBX = `${ROOT}/04-meshy-flamingo-fbx/models/meshy_flamingo.fbx`;
+const MESHY_TEX = `${ROOT}/04-meshy-flamingo-fbx/models/meshy_flamingo.png`;
+const OBJ_URL = `${ROOT}/03-flamingo-3d-obj/models/flamingo_3d.obj`;
+const VRM_URL = `${ROOT}/05-mingo-vtuber2-vrm/models/flamingo_motion.vrm`;
+
+// B — Meshy FBX (slot 04)
+{
+  const v = makeViewer(document.getElementById('p2'), { autoRotate: true, fit: 1.6 });
+  const loader = new FBXLoader();
+  loader.load(MESHY_FBX, (fbx) => {
+    const tex = new THREE.TextureLoader().load(MESHY_TEX);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    fbx.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = false;
+        if (o.material) {
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach((m) => {
+            if (m.map == null) m.map = tex;
+            m.needsUpdate = true;
+          });
+        }
+      }
+    });
+    const box = new THREE.Box3().setFromObject(fbx);
+    const size = box.getSize(new THREE.Vector3());
+    const max = Math.max(size.x, size.y, size.z) || 1;
+    if (max > 20) fbx.scale.setScalar(2 / max);
+    v.setObject(fbx);
+  }, undefined, (e) => {
+    console.error(e);
+    v.setError('Meshy FBX 로드 실패 — demos/view3d 상위 경로 확인');
+  });
+}
+
+// C — OBJ (slot 03)
+{
+  const v = makeViewer(document.getElementById('p3'), { autoRotate: true, fit: 1.5 });
+  new OBJLoader().load(OBJ_URL, (obj) => {
+    obj.traverse((o) => {
+      if (o.isMesh) {
+        o.material = new THREE.MeshStandardMaterial({
+          color: 0xff6b9d,
+          roughness: 0.55,
+          metalness: 0.05,
+        });
+      }
+    });
+    v.setObject(obj);
+  }, undefined, (e) => {
+    console.error(e);
+    v.setError('OBJ 로드 실패');
+  });
+}
+
+// D — VRM (slot 05)
+{
+  const v = makeViewer(document.getElementById('p4'), { autoRotate: true, fit: 1.25 });
+  const loader = new GLTFLoader();
+  loader.register((parser) => new VRMLoaderPlugin(parser));
+  loader.load(VRM_URL, (gltf) => {
+    const vrm = gltf.userData.vrm;
+    if (vrm) {
+      try { VRMUtils.rotateVRM0(vrm); } catch (_) {}
+      vrm.scene.traverse((o) => { o.frustumCulled = false; });
+      v.setObject(vrm.scene);
+    } else {
+      v.setObject(gltf.scene);
+    }
+  }, undefined, (e) => {
+    console.error(e);
+    v.setError('VRM 로드 실패');
+  });
+}
+</script>
+</body>
+</html>
