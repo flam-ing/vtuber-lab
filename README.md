@@ -8,7 +8,7 @@
 | # | 폴더 | 한 줄 | 움직이는 단위 | 상태 |
 |---|------|------|---------------|------|
 | **1** | **[01-mingo-4cut/](01-mingo-4cut/)** | 4컷 PNG — 입·눈 스위치 | **장면(이미지 전체)** | ✅ |
-| **2** | **[02-chibi-25d/](02-chibi-25d/)** | 치비 2.5D — 파츠 레이어 | **파츠(눈·입·손…)** | ✅ |
+| **2** | **[02-chibi-25d/](02-chibi-25d/)** + **mingo-vtuber Chibi** | 치비 2.5D **플라밍고 후드** 레이어 리그 | **파츠(머리·팔·손·입·눈)** | ✅ |
 | **3** | **[03/](03/)** | (예정) | — | 🔒 |
 | **4** | **[04-vroid-base-custom-girl/](04-vroid-base-custom-girl/)** | VRM 3D 전신 | **본(관절)** | ✅ |
 | — | **[archive/](archive/)** | live2d · flamingo2 · 실험 잔여 | — | 보관 |
@@ -23,7 +23,7 @@
 | 01 · 4컷 PNGTuber | 02 · 치비 2.5D | 04 · VRM 3D |
 |:--:|:--:|:--:|
 | ![01](demos/01-pngtuber.gif) | ![02](demos/02-chibi25d.gif) | ![04](demos/04-vroid.gif) |
-| 입 · 깜빡 · 흔들림 (순수 흑배경) | 고개 기울기 · 시선 · 손 포즈 · 입/깜빡 | 상반신 구도 · 고개/표정 · 부드러운 팔 |
+| 입 · 깜빡 · 흔들림 (순수 흑배경) | **후드 치비** · 고개 · 입 · 윙크 · 손 포즈 | 상반신 구도 · 고개/표정 · 부드러운 팔 |
 
 > 데모는 **설명용 스크립트 모션**이다 (얼굴이 영상에 안 나오게).  
 > 실제 앱은 웹캠 Face/Pose 트래킹으로 구동한다. 소스: [`demos/`](demos/)
@@ -71,37 +71,35 @@ cd 01-mingo-4cut
 
 ---
 
-## 2) chibi-style 2.5 VTuber
+## 2) chibi-style 2.5 VTuber — **플라밍고 후드 최종본**
 
-**원리:** 눈흰자·홍채·입·손 등을 **파츠 PNG로 분리** → PSD 레이어 →  
-[Anime2.5DRig](https://852wa.github.io/Anime2.5DRig/) 에 드롭해 고개/시선/입을 움직인다.
+**대표:** 파워퍼프풍 치비 + **분홍 플라밍고 후드** + 남색 저지.  
+**런타임:** [`mingo-vtuber` / `apps/chibi`](https://github.com/minwoo19930301/mingo-vtuber)  
+몸·머리·양팔(손 포즈)·입·윙크 레이어드 리그 + MediaPipe Holistic.
 
 ```bash
-cd 02-chibi-25d
-../tuber-env/bin/python assemble_chibi.py
-# Chrome: https://852wa.github.io/Anime2.5DRig/ 에 chibi_anime25d.psd 드롭
+cd ../mingo-vtuber   # 형제 레포
+npm install && npm run chibi:dev
+# 데스크톱 오버레이
+npm run desktop:dev
 ```
 
-→ [02-chibi-25d/README.md](02-chibi-25d/README.md)
+README 데모 GIF(`demos/02-chibi25d.gif`)는 이 앱의 `public/rig/*` 로 합성  
+(고개 · 입 · 윙크 · 손 rest/open/point/peace/fist).
 
-### 2.5 버전 여러 개 (로컬에 남아 있음)
+### 헷갈리기 쉬운 폴더
 
-| 버전 | 위치 | 비고 |
+| 버전 | 위치 | 후드? |
 |------|------|------|
-| **v3 활성** | `02-chibi-25d/` | `chibi_anime25d.psd` + `parts/` (현재 슬롯) |
-| **실험 b** | `archive/chibi_experiments/parts_b/` | 파츠 세트 B · `preview_b.png` |
-| **실험 PSD** | `archive/chibi_experiments/chibi_anime25d_*.psd` | 복사본 / b / v3 |
-| **QA 합성** | `archive/chibi_experiments/parts/qa_*.png` | idle·blink·talk **정답 합성** |
-| **flamingo2** | `archive/flamingo2/` | 다른 치비/생성 파이프 |
+| **✅ 최종 치비** | `mingo-vtuber/apps/chibi/` | ✅ |
+| `02-chibi-25d/` | Anime2.5D PSD 실험 (후드 없음) | ❌ |
+| `archive/live2d/` | 플라밍고 **본체** Live2D | 본체 |
+| hood 시안 | `mingo-vtuber/.../flamingo-hood-*` | ✅ |
 
-버전 비교 시트: ![chibi versions](demos/chibi_versions_compare.png)  
-(`demos/chibi_versions_compare.png`)
-
-**깜빡임 합성 주의:** open-eye 레이어(`eyewhite`·`irides`·`eyelash`)를 켠 채로  
-`eye_close`만 올리면 **뜨지도 감지도 않은 눈**처럼 보인다.  
-깜빡일 때는 open-eye를 **전부 끄고** closed lid만 켠다. (데모: `demos/demo_02_clean.py`)
+사진 비교: `demos/chibi_hood_compare/COMPARE_sheet.jpg`
 
 ---
+
 
 ## 4) vroid-base-custom-girl — 3D 전신 VTuber
 
