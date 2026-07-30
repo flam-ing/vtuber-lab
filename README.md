@@ -29,12 +29,12 @@
 | 01 · 4컷 PNGTuber | 02 · 라우디 러프 + 후드 | 03 · flamingo_3d.obj |
 |:--:|:--:|:--:|
 | ![01](demos/01-pngtuber.gif) | ![02](demos/02-chibi25d.gif) | ![03](demos/03-obj.gif) |
-| 입 · 깜빡 · 흔들림 | 고개 · 입 · 윙크 · 손 포즈 | 로우폴리 메시 회전 |
+| 입 · 깜빡 · 흔들림 | 고개 · 입 · 윙크 · 손 포즈 | bob · rock · 짧은 yaw (본 없음) |
 
 | 04 · Meshy FBX | 05 · flamingo_motion.vrm | 06 · VRM 풀 앱 |
 |:--:|:--:|:--:|
 | ![04](demos/04-meshy.gif) | ![05](demos/05-vrm.gif) | ![06](demos/06-vroid.gif) |
-| 생성 3D 텍스처 메시 회전 | 리깅 VRM 턴테이블 | 고개/표정 · 팔·손 포즈 사이클 |
+| bob · rock · 짧은 yaw | 고개·깜빡·입·팔 포즈 페이즈 | 고개/표정 · 팔·손 포즈 사이클 |
 
 > 데모는 **설명용 스크립트 모션** (얼굴이 영상에 안 나오게).  
 > 실제 앱(01/02/06)은 웹캠 Face/Pose 트래킹. 소스·캡처: [`demos/`](demos/)

@@ -19,13 +19,11 @@ const CHROME =
 const PORT = process.env.PORT || '8799';
 const SIZE = 520;
 const FPS = 12;
-const SECONDS = 4.5;
-const FRAMES = Math.round(FPS * SECONDS);
-
+// VRM needs longer to show pose phases; mesh demos ~5s
 const JOBS = [
-  { id: '03', m: 'obj', gif: '03-obj.gif', preview: '03-preview.jpg', slotPreview: join(ROOT, '03-flamingo-3d-obj', 'preview.png') },
-  { id: '04', m: 'fbx', gif: '04-meshy.gif', preview: '04-preview.jpg', slotPreview: join(ROOT, '04-meshy-flamingo-fbx', 'preview.png') },
-  { id: '05', m: 'vrm', gif: '05-vrm.gif', preview: '05-preview.jpg', slotPreview: join(ROOT, '05-flamingo-motion-vrm', 'preview.png') },
+  { id: '03', m: 'obj', gif: '03-obj.gif', preview: '03-preview.jpg', slotPreview: join(ROOT, '03-flamingo-3d-obj', 'preview.png'), seconds: 5 },
+  { id: '04', m: 'fbx', gif: '04-meshy.gif', preview: '04-preview.jpg', slotPreview: join(ROOT, '04-meshy-flamingo-fbx', 'preview.png'), seconds: 5 },
+  { id: '05', m: 'vrm', gif: '05-vrm.gif', preview: '05-preview.jpg', slotPreview: join(ROOT, '05-flamingo-motion-vrm', 'preview.png'), seconds: 9 },
 ];
 
 function sleep(ms) {
@@ -90,36 +88,30 @@ async function main() {
   });
 
   for (const job of JOBS) {
+    const FRAMES = Math.round(FPS * (job.seconds || 5));
     const dir = join(__dirname, `_frames_${job.id}`);
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
 
     const url = `http://127.0.0.1:${PORT}/demos/view3d/capture.html?m=${job.m}&size=${SIZE}`;
-    console.log(`\n=== ${job.id} ${job.m} ===\n${url}`);
+    console.log(`\n=== ${job.id} ${job.m} (${job.seconds}s, ${FRAMES}f) ===\n${url}`);
     const page = await browser.newPage();
     page.on('console', (msg) => console.log('  [page]', msg.text()));
     page.on('pageerror', (e) => console.error('  [err]', e.message));
 
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 120000 });
     await page.waitForFunction(() => window.__captureReady === true, { timeout: 120000 });
-    await sleep(400);
+    await sleep(500);
 
     const interval = 1000 / FPS;
     for (let i = 0; i < FRAMES; i++) {
       const path = join(dir, `f${String(i).padStart(3, '0')}.png`);
       await page.screenshot({ path, type: 'png' });
-      if (i === 0) {
-        // still preview for demos/
+      if (i === Math.floor(FRAMES * 0.35)) {
+        // pick a mid-motion still for previews (not T-pose frame 0)
         const prev = join(__dirname, job.preview);
         run('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', path, '--out', prev]);
-        // also write slot preview if missing/overwrite for 05
-        if (job.m === 'vrm' || !existsSync(job.slotPreview)) {
-          run('sips', ['-z', '1024', '1024', path, '--out', job.slotPreview.replace(/\.png$/, '_cap.png')]);
-          // keep existing high-res Meshy/OBJ previews; for VRM copy
-          if (job.m === 'vrm') {
-            run('cp', [path, job.slotPreview]);
-          }
-        }
+        run('cp', [path, job.slotPreview]);
       }
       process.stdout.write(`\r  frame ${i + 1}/${FRAMES}`);
       await sleep(interval);

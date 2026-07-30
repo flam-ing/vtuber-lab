@@ -2,14 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<title>slot capture</title>
+<title>slot capture — real motion</title>
 <style>
   html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#0a0a0c; }
   canvas { display:block; width:100%; height:100%; }
   #status {
     position:fixed; left:12px; top:12px; z-index:2; color:#9aa3b2;
     font:12px/1.3 system-ui,sans-serif; opacity:.85; pointer-events:none;
-    display:none; /* hidden for clean README GIFs; ?debug=1 to show */
+    display:none;
   }
 </style>
 </head>
@@ -25,6 +25,11 @@
 }
 </script>
 <script type="module">
+/**
+ * README motion capture — NOT endless turntable.
+ *  obj/fbx: bob + rock + short yaw arc (mesh has no usable rig)
+ *  vrm: head / blink / talk / arm pose phases (like 06 demoMotion)
+ */
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
@@ -37,7 +42,6 @@ const SIZE = Math.min(720, Math.max(480, Number(params.get('size') || 560)));
 const status = document.getElementById('status');
 if (params.get('debug') === '1') status.style.display = 'block';
 
-// fixed pixel size for consistent capture
 document.documentElement.style.width = SIZE + 'px';
 document.documentElement.style.height = SIZE + 'px';
 document.body.style.width = SIZE + 'px';
@@ -70,22 +74,39 @@ scene.add(fill);
 
 let root = null;
 let vrm = null;
+let meshMax = 1;
+let lookY = 0;
+let camDist = 1;
 let t0 = performance.now();
 window.__captureReady = false;
 window.__captureKind = kind;
+
+function smoothstep(a, b, x) {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
 
 function fit(object, offset = 1.4) {
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  const max = Math.max(size.x, size.y, size.z) || 1;
+  meshMax = Math.max(size.x, size.y, size.z) || 1;
   object.position.sub(center);
-  // slight lift for characters
-  if (kind === 'vrm') object.position.y += size.y * 0.02;
-  camera.position.set(max * 0.85, max * 0.45, max * offset);
-  camera.near = max / 200;
-  camera.far = max * 50;
-  camera.lookAt(0, kind === 'vrm' ? max * 0.08 : 0, 0);
+  if (kind === 'vrm') {
+    // bust-up, face camera (three-vrm faces -Z after rotateVRM0 → cam on -Z)
+    lookY = size.y * 0.22;
+    object.position.y += size.y * 0.02;
+    camDist = Math.max(size.y, size.x) * 1.05;
+    camera.position.set(0, lookY + size.y * 0.02, -camDist * 0.85);
+  } else {
+    lookY = 0;
+    camDist = meshMax * offset;
+    camera.position.set(meshMax * 0.55, meshMax * 0.35, camDist);
+  }
+  camera.near = meshMax / 200;
+  camera.far = meshMax * 50;
+  camera.lookAt(0, lookY, 0);
   camera.updateProjectionMatrix();
 }
 
@@ -96,15 +117,157 @@ function setObject(obj, fitOff) {
   fit(obj, fitOff);
 }
 
+function bone(name) {
+  if (!vrm?.humanoid) return null;
+  try {
+    return vrm.humanoid.getNormalizedBoneNode(name);
+  } catch {
+    return null;
+  }
+}
+
+function setExpr(name, v) {
+  if (!vrm?.expressionManager) return;
+  try { vrm.expressionManager.setValue(name, v); } catch {}
+}
+
+/** VRM: multi-phase motion — NOT a spin */
+function animateVrm(t) {
+  const head = bone('head');
+  const neck = bone('neck');
+  const chest = bone('chest') || bone('upperChest');
+  const spine = bone('spine');
+  const lUpper = bone('leftUpperArm');
+  const rUpper = bone('rightUpperArm');
+  const lLower = bone('leftLowerArm');
+  const rLower = bone('rightLowerArm');
+  const lHand = bone('leftHand');
+  const rHand = bone('rightHand');
+
+  // idle breath
+  const breath = Math.sin(t * 2.2) * 0.015;
+  if (spine) spine.rotation.x = breath;
+  if (chest) chest.rotation.x = breath * 0.6;
+
+  // phases ~1.8s: look → blink/talk → arms out → wave R → rest
+  const cycle = 9.0;
+  const u = t % cycle;
+  const p = Math.floor(u / 1.8); // 0..4
+  const local = (u % 1.8) / 1.8;
+  const ease = smoothstep(0, 0.25, local) * (1 - smoothstep(0.75, 1, local));
+
+  // reset arms toward rest (T-pose VRM often needs down)
+  const restArm = 1.15; // fold arms down from T
+  if (lUpper) { lUpper.rotation.z = restArm; lUpper.rotation.x = 0; lUpper.rotation.y = 0; }
+  if (rUpper) { rUpper.rotation.z = -restArm; rUpper.rotation.x = 0; rUpper.rotation.y = 0; }
+  if (lLower) { lLower.rotation.x = 0.1; lLower.rotation.y = 0; lLower.rotation.z = 0; }
+  if (rLower) { rLower.rotation.x = 0.1; rLower.rotation.y = 0; rLower.rotation.z = 0; }
+  if (lHand) { lHand.rotation.set(0, 0, 0); }
+  if (rHand) { rHand.rotation.set(0, 0, 0); }
+
+  setExpr('blink', 0);
+  setExpr('aa', 0);
+  setExpr('ih', 0);
+  setExpr('ou', 0);
+  setExpr('happy', 0);
+
+  if (head) {
+    head.rotation.x = Math.sin(t * 1.1) * 0.04;
+    head.rotation.y = 0;
+    head.rotation.z = Math.sin(t * 0.7) * 0.03;
+  }
+  if (neck) neck.rotation.y = 0;
+
+  if (p === 0) {
+    // look L/R
+    if (head) head.rotation.y = Math.sin(local * Math.PI * 2) * 0.45 * ease;
+    if (neck) neck.rotation.y = head ? head.rotation.y * 0.4 : 0;
+  } else if (p === 1) {
+    // blink + talk
+    const blink = local < 0.15 ? smoothstep(0, 0.07, local) * (1 - smoothstep(0.08, 0.15, local))
+      : (local > 0.55 && local < 0.7)
+        ? smoothstep(0.55, 0.6, local) * (1 - smoothstep(0.62, 0.7, local))
+        : 0;
+    setExpr('blink', blink);
+    const talk = 0.5 + 0.5 * Math.sin(local * Math.PI * 8);
+    setExpr('aa', talk * 0.7 * ease);
+    setExpr('ih', (1 - talk) * 0.35 * ease);
+    if (head) head.rotation.x = 0.05 + Math.sin(local * 20) * 0.02;
+  } else if (p === 2) {
+    // both arms forward/out
+    if (lUpper) {
+      lUpper.rotation.z = lerp(restArm, 0.35, ease);
+      lUpper.rotation.x = lerp(0, -0.6, ease);
+      lUpper.rotation.y = lerp(0, 0.25, ease);
+    }
+    if (rUpper) {
+      rUpper.rotation.z = lerp(-restArm, -0.35, ease);
+      rUpper.rotation.x = lerp(0, -0.6, ease);
+      rUpper.rotation.y = lerp(0, -0.25, ease);
+    }
+    if (lLower) lLower.rotation.x = lerp(0.1, 0.5, ease);
+    if (rLower) rLower.rotation.x = lerp(0.1, 0.5, ease);
+    setExpr('happy', 0.4 * ease);
+  } else if (p === 3) {
+    // wave right
+    if (rUpper) {
+      rUpper.rotation.z = lerp(-restArm, -0.2, ease);
+      rUpper.rotation.x = lerp(0, -1.4, ease);
+      rUpper.rotation.y = lerp(0, -0.3, ease);
+    }
+    if (rLower) {
+      rLower.rotation.x = lerp(0.1, 0.2, ease);
+      rLower.rotation.z = Math.sin(local * Math.PI * 6) * 0.55 * ease;
+    }
+    if (rHand) rHand.rotation.z = Math.sin(local * Math.PI * 6) * 0.35 * ease;
+    if (lUpper) {
+      lUpper.rotation.z = restArm * 0.95;
+      lUpper.rotation.x = -0.15;
+    }
+    setExpr('happy', 0.55 * ease);
+  } else {
+    // rest / slight sway
+    if (head) head.rotation.y = Math.sin(t * 1.3) * 0.12;
+    setExpr('happy', 0.15);
+  }
+
+  // tiny body yaw only — keep face toward camera
+  if (root) root.rotation.y = Math.sin(t * 0.5) * 0.12;
+}
+
+/** Static mesh: bob + rock + short yaw arc (no endless spin) */
+function animateMesh(t) {
+  if (!root) return;
+  const cycle = 5.0;
+  const u = (t % cycle) / cycle;
+  // bob
+  root.position.y = Math.sin(t * 2.4) * meshMax * 0.03;
+  // rock
+  root.rotation.x = Math.sin(t * 1.6) * 0.12;
+  root.rotation.z = Math.sin(t * 1.1) * 0.08;
+  // short yaw arc: -35° ↔ +35° (not 360°)
+  root.rotation.y = Math.sin(u * Math.PI * 2) * 0.6;
+  // subtle camera orbit for depth (quarter circle feel)
+  const ang = 0.35 + Math.sin(t * 0.7) * 0.45;
+  const elev = 0.32 + Math.sin(t * 0.5) * 0.08;
+  camera.position.set(
+    Math.sin(ang) * camDist * 0.95,
+    elev * meshMax,
+    Math.cos(ang) * camDist * 0.95,
+  );
+  camera.lookAt(0, lookY + root.position.y * 0.3, 0);
+}
+
 function markReady() {
-  // render a couple frames then flag
-  for (let i = 0; i < 3; i++) {
-    if (root) root.rotation.y = 0.15 * i;
-    if (vrm) vrm.update(1 / 30);
+  for (let i = 0; i < 4; i++) {
+    if (vrm) {
+      animateVrm(i * 0.05);
+      vrm.update(1 / 30);
+    } else if (root) {
+      animateMesh(i * 0.05);
+    }
     renderer.render(scene, camera);
   }
-  if (root) root.rotation.y = 0;
-  renderer.render(scene, camera);
   window.__captureReady = true;
   status.textContent = `ready · ${kind}`;
 }
@@ -112,19 +275,12 @@ function markReady() {
 function tick() {
   requestAnimationFrame(tick);
   const t = (performance.now() - t0) / 1000;
-  if (root) {
-    // full turn ~4.5s
-    root.rotation.y = t * (Math.PI * 2 / 4.5);
-    if (kind === 'vrm') {
-      // gentle head/idle
-      const head = root.getObjectByName('J_Bip_C_Head') || root.getObjectByName('Head');
-      if (head) {
-        head.rotation.x = Math.sin(t * 1.4) * 0.08;
-        head.rotation.z = Math.sin(t * 0.9) * 0.05;
-      }
-    }
+  if (kind === 'vrm' && vrm) {
+    animateVrm(t);
+    vrm.update(1 / 60);
+  } else if (root) {
+    animateMesh(t);
   }
-  if (vrm) vrm.update(1 / 60);
   renderer.render(scene, camera);
 }
 tick();
@@ -176,9 +332,14 @@ async function load() {
       if (vrm) {
         try { VRMUtils.rotateVRM0(vrm); } catch (_) {}
         vrm.scene.traverse((o) => { o.frustumCulled = false; });
-        setObject(vrm.scene, 1.2);
+        // start arms down if T-pose
+        const lU = bone('leftUpperArm');
+        const rU = bone('rightUpperArm');
+        if (lU) lU.rotation.z = 1.15;
+        if (rU) rU.rotation.z = -1.15;
+        setObject(vrm.scene, 1.15);
       } else {
-        setObject(gltf.scene, 1.2);
+        setObject(gltf.scene, 1.15);
       }
       markReady();
       return;
