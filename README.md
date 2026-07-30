@@ -11,31 +11,47 @@
 | **2** | **mingo-vtuber Chibi** (형제 레포) | **라우디 러프 보이즈** 풍 + 플라밍고 후드 레이어 리그 | **파츠(머리·팔·손·입·눈)** | ✅ |
 | **3** | **[03-flamingo-3d-obj/](03-flamingo-3d-obj/)** | `flamingo_3d.obj` 가벼운 메시 | 메시 회전 | ✅ |
 | **4** | **[04-meshy-flamingo-fbx/](04-meshy-flamingo-fbx/)** | **Meshy** 생성 3D FBX | 메시 회전 | ✅ |
-| **5** | **[05-mingo-vtuber2-vrm/](05-mingo-vtuber2-vrm/)** | `flamingo_motion.vrm` (mingo-vtuber2) | **본(리그 VRM)** | ✅ |
+| **5** | **[05-flamingo-motion-vrm/](05-flamingo-motion-vrm/)** | `flamingo_motion.vrm` 리깅 VRM | **스켈레톤(본)** | ✅ |
 | **6** | **[06-vroid-base-custom-girl/](06-vroid-base-custom-girl/)** | Electron + MediaPipe **풀 트래킹 앱** (구 슬롯 04) | **본 + 실시간 트래킹** | ✅ |
 | — | **[archive/](archive/)** | live2d · flamingo2 · 실험 잔여 | — | 보관 |
 
 > 예전 **슬롯 04 (vroid Electron 앱)** → 지금 **슬롯 06**.  
-> 03~05는 그 앞에 **입체·리그 중간 단계**를 append 한 것.
+> 03~05는 그 앞에 **입체·리그 중간 단계**를 append 한 것.  
+> 슬롯 05 폴더명: `05-flamingo-motion-vrm` (구 `05-mingo-vtuber2-vrm`).
 
 ---
 
-## 미리보기 (모션 데모)
+## 미리보기 (모션 데모 · 6개 전부)
 
 검은 배경 · 얼굴/웹캠 UI 없음 · 아바타만 움직이도록 녹화한 데모 GIF.  
 (06 데모 촬영은 **상반신 프레이밍** — 모델 자체는 전신 유지)
 
-| 01 · 4컷 PNGTuber | 02 · 라우디 러프 + 후드 | 06 · VRM 풀 앱 (상반신 촬영) |
+| 01 · 4컷 PNGTuber | 02 · 라우디 러프 + 후드 | 03 · flamingo_3d.obj |
 |:--:|:--:|:--:|
-| ![01](demos/01-pngtuber.gif) | ![02](demos/02-chibi25d.gif) | ![06](demos/04-vroid.gif) |
-| 입 · 깜빡 · 흔들림 | 고개 · 입 · 윙크 · 손 포즈 5종 | 고개/표정 · 팔·손 포즈 사이클 |
+| ![01](demos/01-pngtuber.gif) | ![02](demos/02-chibi25d.gif) | ![03](demos/03-obj.gif) |
+| 입 · 깜빡 · 흔들림 | 고개 · 입 · 윙크 · 손 포즈 | 로우폴리 메시 회전 |
+
+| 04 · Meshy FBX | 05 · flamingo_motion.vrm | 06 · VRM 풀 앱 |
+|:--:|:--:|:--:|
+| ![04](demos/04-meshy.gif) | ![05](demos/05-vrm.gif) | ![06](demos/06-vroid.gif) |
+| 생성 3D 텍스처 메시 회전 | 리깅 VRM 턴테이블 | 고개/표정 · 팔·손 포즈 사이클 |
 
 > 데모는 **설명용 스크립트 모션** (얼굴이 영상에 안 나오게).  
-> 실제 앱은 웹캠 Face/Pose 트래킹. 소스: [`demos/`](demos/)
+> 실제 앱(01/02/06)은 웹캠 Face/Pose 트래킹. 소스·캡처: [`demos/`](demos/)
 
-### 03~05 입체 후보 한눈에
+### 정지 컷 (각 슬롯 폴더 `preview*`)
 
-로컬 4분할 뷰어 (드래그 회전 / 스크롤 줌):
+| 01 | 02 | 03 |
+|:--:|:--:|:--:|
+| ![01s](demos/01-preview.jpg) | ![02s](demos/02-preview.jpg) | ![03s](demos/03-preview.jpg) |
+
+| 04 | 05 | 06 |
+|:--:|:--:|:--:|
+| ![04s](demos/04-preview.jpg) | ![05s](demos/05-preview.jpg) | ![06s](demos/06-preview.jpg) |
+
+### 03~05 로컬 통합 뷰어
+
+드래그 회전 / 스크롤 줌 4분할:
 
 ```bash
 # 레포 루트에서
@@ -45,12 +61,10 @@ python3 -m http.server 8799
 
 | 패널 | 슬롯 | 에셋 |
 |------|------|------|
-| A | (참고) Live2D 미리보기 | `archive/live2d/preview.png` |
+| A | (참고) Live2D 미리보기 | `archive/live2d` |
 | B | **04** Meshy FBX | `04-meshy-flamingo-fbx/models/` |
 | C | **03** OBJ | `03-flamingo-3d-obj/models/` |
-| D | **05** flamingo_motion.vrm | `05-mingo-vtuber2-vrm/models/` |
-
-정지 비교 시트: ![slot03+](demos/slot03_candidates.jpg)
+| D | **05** flamingo_motion.vrm | `05-flamingo-motion-vrm/models/` |
 
 ---
 
@@ -68,7 +82,7 @@ python3 -m http.server 8799
 | 02 | 2D 레이어 리그 (후드) | 고개·팔·손 파츠 |
 | 03 | 본 없는 OBJ | “입체인가?” 확인 |
 | 04 | 생성 FBX + 텍스처 | 디테일 있는 메시 |
-| 05 | 리그 VRM 모델 | 본은 있으나 이 레포엔 모델 중심 |
+| 05 | 리깅 VRM 모델 | 스켈레톤 있는 휴머노이드 |
 | 06 | VRM + 트래킹 앱 | **최종 제품형** |
 
 ---
@@ -99,10 +113,7 @@ npm install && npm run chibi:dev
 
 ## 3) flamingo_3d.obj
 
-```bash
-# 뷰어
-cd demos/view3d && python3 -m http.server 8799
-```
+가벼운 로우폴리 메시. 본 없음 — 입체 실루엣 확인용.
 
 → [03-flamingo-3d-obj/README.md](03-flamingo-3d-obj/README.md)
 
@@ -116,11 +127,12 @@ cd demos/view3d && python3 -m http.server 8799
 
 ---
 
-## 5) mingo-vtuber2 / flamingo_motion.vrm
+## 5) flamingo_motion.vrm — 리깅 VRM
 
-리그 있는 VRM 스냅샷 + 형제 레포 [mingo-vtuber2](https://github.com/minwoo19930301/mingo-vtuber2).
+스켈레톤이 있는 휴머노이드 VRM.  
+형제 앱: [mingo-vtuber2](https://github.com/minwoo19930301/mingo-vtuber2) (Swift/Metal).
 
-→ [05-mingo-vtuber2-vrm/README.md](05-mingo-vtuber2-vrm/README.md)
+→ [05-flamingo-motion-vrm/README.md](05-flamingo-motion-vrm/README.md)
 
 ---
 
@@ -161,9 +173,9 @@ vtuber-lab/
 ├── 02-chibi-25d/               # (실험) 후드 없는 Anime2.5D — 대표는 mingo-vtuber
 ├── 03-flamingo-3d-obj/         # OBJ 메시
 ├── 04-meshy-flamingo-fbx/      # Meshy FBX
-├── 05-mingo-vtuber2-vrm/       # flamingo_motion.vrm
+├── 05-flamingo-motion-vrm/     # flamingo_motion.vrm (리깅)
 ├── 06-vroid-base-custom-girl/  # Electron 풀 앱 (구 04)
-├── demos/                      # README GIF + view3d 뷰어
+├── demos/                      # README GIF 01–06 + view3d 뷰어
 ├── archive/
 └── README.md
 ```

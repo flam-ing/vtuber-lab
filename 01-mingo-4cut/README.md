@@ -3,7 +3,15 @@
 플라밍고 **4컷** 표정 스위치 + 웹캠 Face Landmarker.  
 입 열림·눈 깜빡임을 크로스페이드로 붙이고, 머리 위치도 살짝 따라간다.
 
-> 레포 슬롯: **1/4** · 예전 폴더명 `flamingo/`
+![preview](preview.jpg)
+
+> 레포 슬롯: **1/6** · 표현 단위 = **장면(이미지 전체)**
+
+## 모션 데모
+
+![demo](../demos/01-pngtuber.gif)
+
+입 열림 · 깜빡임 · 가벼운 흔들림 (얼굴/웹캠 UI 없음, 설명용 스크립트 모션).
 
 ## 4컷 매핑
 
@@ -20,14 +28,14 @@
 
 | 파일 | 설명 |
 |------|------|
-| `run_pngtuber.py` | 메인 (구 `my_webcam_pngtuber.py`) |
+| `run_pngtuber.py` | 메인 |
 | `assets/*.png` | 4컷 스프라이트 |
+| `preview.jpg` | README 정지 컷 |
 | `face_landmarker.task` | MediaPipe 모델 (없으면 첫 실행 시 다운로드, gitignore) |
 
 ## 실행
 
 ```bash
-# repo 루트에서 venv 준비 후
 cd 01-mingo-4cut
 ../tuber-env/bin/python run_pngtuber.py
 ```
@@ -37,13 +45,4 @@ cd 01-mingo-4cut
 ## OBS
 
 1. 소스 → macOS 화면 캡처 → `Webcam Face-Tracking PNGTuber` 창  
-2. 배경까지 빼려면 크로마 키 (또는 코드 `bg`를 `#00FF00`으로)  
-3. 회의용: OBS 가상 카메라
-
-## 튜닝
-
-`run_pngtuber.py` 상단 Motion tuning:
-
-- `MOUTH_LO` / `MOUTH_HI` — 입 민감도  
-- `BLINK_LO` / `BLINK_HI` — 눈 감김  
-- `MOVE_X_RANGE` / `MOVE_Y_RANGE` — 머리 따라가기 폭  
+2. 배경까지 빼려면 크로마 키 (또는 코드 `bg`를 `#00FF00`으로)

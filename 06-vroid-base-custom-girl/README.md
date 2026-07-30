@@ -3,6 +3,18 @@
 VRoid/VRM 기반 **3D Electron 데스크톱 버튜버** (전신 골격 · 손 · 얼굴).  
 예전 이름/레포: `mingo-mate` → 예전 슬롯 04 → **슬롯 06** (최종 풀 스택).
 
+![preview](preview.jpg)
+
+> 레포 슬롯: **6/6** · 표현 단위 = **본 + 실시간 트래킹**
+
+## 모션 데모
+
+![demo](../demos/06-vroid.gif)
+
+고개/표정 · 팔·손 포즈 사이클. 촬영은 **상반신 프레이밍** (모델 자체는 전신 유지, 얼굴/웹캠 UI 없음).
+
+## 한 줄 스펙
+
 | 항목 | 내용 |
 |------|------|
 | 아바타 | VRM (`public/models/avatar.vrm` 등) |
@@ -38,18 +50,9 @@ MINGO_DEMO_MOTION=1 npm run dev
 ├── src/
 │   ├── main.ts        # 프레이밍 · 루프 · 드래그 · 디버그 UI
 │   ├── model/         # VRM 리깅 · armSolver
-│   ├── tracking/      # MediaPipe + landmark overlay
-│   └── aliveness/     # idle 모션 합성
-├── public/models/     # .vrm + MediaPipe .task
-├── docs/              # BRIEF / pipeline
+│   ├── tracking/      # MediaPipe 래퍼
+│   └── aliveness/     # 아이들 모션
+├── public/models/     # avatar.vrm, landmarker tasks
+├── preview.jpg        # README 정지 컷
 └── package.json
 ```
-
-## 이전 슬롯과의 관계
-
-| 슬롯 | 역할 |
-|------|------|
-| 03 OBJ | 본 없는 가벼운 메시 |
-| 04 Meshy | 생성 3D 외형 |
-| 05 flamingo_motion.vrm | 리그 VRM 모델 (mingo-vtuber2) |
-| **06 (여기)** | Electron + 트래킹 **제품형 앱** |
