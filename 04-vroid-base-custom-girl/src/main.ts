@@ -419,60 +419,109 @@ function loop() {
 
   let frame
   if (demoMotion) {
-    // Face-free upper-body demo: gentle head + soft arm sway (no wild IK)
-    const mouth = 0.25 + 0.35 * Math.max(0, Math.sin(t * 7.5))
-    const blink = (t % 2.8) < 0.11 ? 1 : 0
-    const yaw = 0.22 * Math.sin(t * 0.7)
-    const pitch = 0.08 * Math.sin(t * 0.95)
-    const roll = 0.05 * Math.sin(t * 1.15)
-    const sway = 0.12 * Math.sin(t * 1.4)
-    const lift = 0.08 * Math.sin(t * 1.1)
-    const L = neutralArm(1)
-    const R = neutralArm(-1)
-    L.present = 0.85
-    R.present = 0.85
-    L.upperDir = { x: 0.22 + sway, y: -0.92 + lift, z: 0.28 }
-    L.lowerDir = { x: 0.16 + sway * 0.5, y: -0.88, z: 0.42 }
-    L.palmNormal = { x: -0.2, y: 0.1, z: 0.97 }
-    L.handDir = { x: 0.12, y: -0.2, z: 0.97 }
-    L.fingers = [0.25, 0.2, 0.22, 0.24, 0.28]
-    L.spread = 0.2
-    L.wave = 0
-    R.upperDir = { x: -0.22 - sway, y: -0.92 + lift * 0.8, z: 0.28 }
-    R.lowerDir = { x: -0.16 - sway * 0.5, y: -0.88, z: 0.42 }
-    R.palmNormal = { x: 0.2, y: 0.1, z: 0.97 }
-    R.handDir = { x: -0.12, y: -0.2, z: 0.97 }
-    R.fingers = [0.25, 0.2, 0.22, 0.24, 0.28]
-    R.spread = 0.2
-    R.wave = 0
+    // Face-free bust-up demo: clear arm + hand pose cycles (self-test-safe dirs)
     const n3 = (v: { x: number; y: number; z: number }) => {
       const l = Math.hypot(v.x, v.y, v.z) || 1
       return { x: v.x / l, y: v.y / l, z: v.z / l }
     }
-    L.upperDir = n3(L.upperDir); L.lowerDir = n3(L.lowerDir)
-    R.upperDir = n3(R.upperDir); R.lowerDir = n3(R.lowerDir)
-    L.palmNormal = n3(L.palmNormal); L.handDir = n3(L.handDir)
-    R.palmNormal = n3(R.palmNormal); R.handDir = n3(R.handDir)
+    const mouth = 0.2 + 0.4 * Math.max(0, Math.sin(t * 7.0))
+    const blink = (t % 2.8) < 0.12 ? 1 : 0
+    const yaw = 0.2 * Math.sin(t * 0.65)
+    const pitch = 0.07 * Math.sin(t * 0.9)
+    const roll = 0.04 * Math.sin(t * 1.1)
+
+    // Pose phases ~2.2s each: rest → forward → T-out → wave R → fist
+    const phase = Math.floor(t / 2.2) % 5
+    const L = neutralArm(1)
+    const R = neutralArm(-1)
+    L.present = 1
+    R.present = 1
+    L.wave = 0
+    R.wave = 0
+    // default open-ish hands
+    let fingersOpen: [number, number, number, number, number] = [0.15, 0.1, 0.1, 0.12, 0.15]
+    let fingersFist: [number, number, number, number, number] = [0.85, 0.9, 0.9, 0.9, 0.9]
+    let fingers = fingersOpen
+    let spread = 0.35
+
+    if (phase === 0) {
+      // rest-ish (neutral dirs, slight present)
+      Object.assign(L, neutralArm(1), { present: 1 })
+      Object.assign(R, neutralArm(-1), { present: 1 })
+      fingers = [0.3, 0.25, 0.25, 0.28, 0.3]
+      spread = 0.15
+    } else if (phase === 1) {
+      // both arms forward (toward camera)
+      L.upperDir = n3({ x: 0.15, y: -0.25, z: 0.96 })
+      L.lowerDir = n3({ x: 0.1, y: -0.15, z: 0.98 })
+      R.upperDir = n3({ x: -0.15, y: -0.25, z: 0.96 })
+      R.lowerDir = n3({ x: -0.1, y: -0.15, z: 0.98 })
+      L.palmNormal = n3({ x: 0, y: 0, z: 1 })
+      R.palmNormal = n3({ x: 0, y: 0, z: 1 })
+      L.handDir = n3({ x: 0.05, y: -0.2, z: 0.98 })
+      R.handDir = n3({ x: -0.05, y: -0.2, z: 0.98 })
+      fingers = fingersOpen
+      spread = 0.45
+    } else if (phase === 2) {
+      // T-pose-ish arms out (clear silhouette)
+      L.upperDir = n3({ x: 0.95, y: -0.15, z: 0.2 })
+      L.lowerDir = n3({ x: 0.92, y: -0.1, z: 0.35 })
+      R.upperDir = n3({ x: -0.95, y: -0.15, z: 0.2 })
+      R.lowerDir = n3({ x: -0.92, y: -0.1, z: 0.35 })
+      L.palmNormal = n3({ x: 0, y: -0.2, z: 0.98 })
+      R.palmNormal = n3({ x: 0, y: -0.2, z: 0.98 })
+      L.handDir = n3({ x: 0.9, y: 0, z: 0.4 })
+      R.handDir = n3({ x: -0.9, y: 0, z: 0.4 })
+      fingers = fingersOpen
+      spread = 0.5
+    } else if (phase === 3) {
+      // right arm wave (raise), left rest
+      Object.assign(L, neutralArm(1), { present: 1 })
+      R.upperDir = n3({ x: -0.35, y: 0.55, z: 0.75 })
+      R.lowerDir = n3({ x: -0.25, y: 0.15, z: 0.96 })
+      R.palmNormal = n3({ x: 0.1, y: 0.2, z: 0.97 })
+      R.handDir = n3({ x: -0.1, y: 0.3, z: 0.95 })
+      R.wave = 0.7 + 0.3 * Math.sin(t * 6)
+      fingers = fingersOpen
+      spread = 0.4
+    } else {
+      // both hands fist in front
+      L.upperDir = n3({ x: 0.2, y: -0.35, z: 0.9 })
+      L.lowerDir = n3({ x: 0.15, y: -0.2, z: 0.97 })
+      R.upperDir = n3({ x: -0.2, y: -0.35, z: 0.9 })
+      R.lowerDir = n3({ x: -0.15, y: -0.2, z: 0.97 })
+      L.palmNormal = n3({ x: 0, y: 0, z: 1 })
+      R.palmNormal = n3({ x: 0, y: 0, z: 1 })
+      L.handDir = n3({ x: 0, y: -0.15, z: 0.99 })
+      R.handDir = n3({ x: 0, y: -0.15, z: 0.99 })
+      fingers = fingersFist
+      spread = 0.05
+    }
+    L.fingers = fingers
+    R.fingers = fingers
+    L.spread = spread
+    R.spread = spread
+
     const demo: RigFrame = {
       tracked: 1,
       head: { pitch, yaw, roll },
-      gaze: { x: 0.28 * Math.sin(t * 0.65), y: 0.1 * Math.sin(t * 0.85) },
+      gaze: { x: 0.25 * Math.sin(t * 0.7), y: 0.08 * Math.sin(t * 0.9) },
       blinkL: blink,
       blinkR: blink,
-      browL: 0.08 * Math.sin(t * 0.45),
-      browR: 0.08 * Math.sin(t * 0.45),
+      browL: 0.06 * Math.sin(t * 0.5),
+      browR: 0.06 * Math.sin(t * 0.5),
       mouthOpen: mouth,
-      mouthSmile: 0.28 + 0.12 * Math.sin(t * 0.55),
+      mouthSmile: 0.25 + 0.15 * Math.sin(t * 0.55),
       armL: L,
       armR: R,
       body: {
         ...neutralBody(),
-        present: 0.5,
-        lean: { x: 0.03 * Math.sin(t * 0.75), z: 0.02 * Math.sin(t * 0.9) },
-        twist: 0.05 * Math.sin(t * 0.5),
+        present: 0.45,
+        lean: { x: 0.025 * Math.sin(t * 0.7), z: 0.02 * Math.sin(t * 0.85) },
+        twist: 0.04 * Math.sin(t * 0.5),
         legsPresent: 0,
       },
-      fx: { heart: false, happy: mouth > 0.55, sweat: false, anger: false },
+      fx: { heart: false, happy: mouth > 0.5, sweat: false, anger: false },
       breath: (Math.sin(t * 1.5) + 1) * 0.5,
     }
     frame = demo

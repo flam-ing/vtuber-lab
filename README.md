@@ -8,8 +8,8 @@
 | # | 폴더 | 한 줄 | 움직이는 단위 | 상태 |
 |---|------|------|---------------|------|
 | **1** | **[01-mingo-4cut/](01-mingo-4cut/)** | 4컷 PNG — 입·눈 스위치 | **장면(이미지 전체)** | ✅ |
-| **2** | **[02-chibi-25d/](02-chibi-25d/)** + **mingo-vtuber Chibi** | 치비 2.5D **플라밍고 후드** 레이어 리그 | **파츠(머리·팔·손·입·눈)** | ✅ |
-| **3** | **[03/](03/)** | (예정) | — | 🔒 |
+| **2** | **mingo-vtuber Chibi** (후드) | **라우디 러프 보이즈** 풍 + 플라밍고 후드 레이어 리그 | **파츠(머리·팔·손·입·눈)** | ✅ |
+| **3** | **[03/](03/)** | (후보 검토 중 — 아래 참고) | — | 🔒 |
 | **4** | **[04-vroid-base-custom-girl/](04-vroid-base-custom-girl/)** | VRM 3D 전신 | **본(관절)** | ✅ |
 | — | **[archive/](archive/)** | live2d · flamingo2 · 실험 잔여 | — | 보관 |
 
@@ -20,10 +20,10 @@
 검은 배경 · 얼굴/웹캠 UI 없음 · 아바타만 움직이도록 녹화한 데모 GIF.  
 (04는 **데모 촬영만** 상반신 프레이밍 — 모델 자체는 전신 유지)
 
-| 01 · 4컷 PNGTuber | 02 · 치비 2.5D | 04 · VRM 3D |
+| 01 · 4컷 PNGTuber | 02 · 라우디 러프 보이즈 + 후드 | 04 · VRM 3D (상반신 촬영) |
 |:--:|:--:|:--:|
 | ![01](demos/01-pngtuber.gif) | ![02](demos/02-chibi25d.gif) | ![04](demos/04-vroid.gif) |
-| 입 · 깜빡 · 흔들림 (순수 흑배경) | **후드 치비** · 고개 · 입 · 윙크 · 손 포즈 | 상반신 구도 · 고개/표정 · 부드러운 팔 |
+| 입 · 깜빡 · 흔들림 | 고개 · 입 · 윙크 · **손 포즈 5종** | 고개/표정 · **팔·손 포즈 사이클** |
 
 > 데모는 **설명용 스크립트 모션**이다 (얼굴이 영상에 안 나오게).  
 > 실제 앱은 웹캠 Face/Pose 트래킹으로 구동한다. 소스: [`demos/`](demos/)
@@ -71,9 +71,10 @@ cd 01-mingo-4cut
 
 ---
 
-## 2) chibi-style 2.5 VTuber — **플라밍고 후드 최종본**
+## 2) 라우디 러프 보이즈 스타일 2.5D — **플라밍고 후드 최종본**
 
-**대표:** 파워퍼프풍 치비 + **분홍 플라밍고 후드** + 남색 저지.  
+**대표:** [라우디 러프 보이즈](https://en.wikipedia.org/wiki/List_of_The_Powerpuff_Girls_characters#The_Rowdyruff_Boys) 풍 비율·눈매 + **분홍 플라밍고 후드** + 남색 저지.  
+(내부 폴더명 `chibi` 는 레거시 — 설명에는 “치비” 대신 이 명칭을 씀.)  
 **런타임:** [`mingo-vtuber` / `apps/chibi`](https://github.com/minwoo19930301/mingo-vtuber)  
 몸·머리·양팔(손 포즈)·입·윙크 레이어드 리그 + MediaPipe Holistic.
 
@@ -100,6 +101,23 @@ README 데모 GIF(`demos/02-chibi25d.gif`)는 이 앱의 `public/rig/*` 로 합�
 
 ---
 
+
+## 3) 슬롯 후보 (아직 비움)
+
+사진 비교: ![slot03](demos/slot03_candidates.jpg)
+
+| 후보 | 로컬 위치 | 한 줄 | 03 적합성 |
+|------|-----------|------|-----------|
+| **A Live2D 플라밍고 본체** | `archive/live2d/` | 그림 레이어 리그 심화 | ⭐ 02↔04 **표현 중간** |
+| **B Meshy 3D 플라밍고** | `Downloads/Meshy_…_texture.fbx` | 생성 3D 메시 (별도 작업) | ⭐ 2D→3D **외형 중간** |
+| **C flamingo_3d.obj** | `archive/live2d/flamingo_3d.obj` | 가벼운 OBJ 메시 | 실험용 |
+| **D mingo-vtuber2** | 형제 레포 Swift/Metal VRM | 04와 동급 스택 | 04 형제 (중간 X) |
+| babylon / animalverse | `archive/.av-shots/` | 다른 3D 실험 샷 | 참고 |
+
+**넣는다면:** **A Live2D** 또는 **B Meshy 단순 3D** 중 하나.  
+A는 “파츠 리그 깊게”, B는 “본 없는 입체 한 번” — 스토리가 가장 깔끔함.
+
+---
 
 ## 4) vroid-base-custom-girl — 3D 전신 VTuber
 
